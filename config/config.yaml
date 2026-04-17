@@ -1,6 +1,7 @@
 # Locations of data downloads for 
 # Metatranscriptome sequences and annotation tables
-# Isolate transcriptomes 
+# and Isolate transcriptomes 
+# (isolates sequence files should be the only files in that dir)
 dirs_data: 
   metatranscriptomes: /scratch/bgrodner/metaT_data/old_pipeline_chris_parquets
   isolates: data/shiri_isolates
@@ -8,3 +9,94 @@ dirs_data:
 # Path for marferret-marmicrodb database download
 path_database: /mnt/nfs/projects/marferret/marmicrodb/MMDB_2024_04_14/MarFERReT.v1.1.1.MARMICRODB.2024_04_14.combined.faa.gz
 
+# output dir
+dir_out: results
+
+# Paths to hmmprofiles and associated gene names
+dict_gene_hmmprofile:
+  fbp1: resources/fbp1.hmm
+  btuF: /scratch/bgrodner/Resources/KO_profiles/K25034.hmm
+  desE: /scratch/bgrodner/Resources/KO_profiles/K25287.hmm
+  hmuT: /scratch/bgrodner/Resources/KO_profiles/K25132.hmm
+  fecB: /scratch/bgrodner/Resources/KO_profiles/K25109.hmm
+  btuF2: /scratch/bgrodner/Resources/KO_profiles/K06858.hmm
+  mtsA: /scratch/bgrodner/Resources/KO_profiles/K11704.hmm
+  yclQ: /scratch/bgrodner/Resources/KO_profiles/K25282.hmm
+  fhuD: /scratch/bgrodner/Resources/KO_profiles/K23227.hmm
+  fhuD2: /scratch/bgrodner/Resources/KO_profiles/K25308.hmm
+  htsA: /scratch/bgrodner/Resources/KO_profiles/K25113.hmm
+  znuA: /scratch/bgrodner/Resources/KO_profiles/K11707.hmm
+  znuA2: /scratch/bgrodner/Resources/KO_profiles/K09815.hmm
+  psaA: /scratch/bgrodner/Resources/KO_profiles/K19971.hmm
+  mtnC: /scratch/bgrodner/Resources/KO_profiles/K11601.hmm
+  mtnC2: /scratch/bgrodner/Resources/KO_profiles/K19975.hmm
+
+# Location to put known crystal structure sequences 
+# (should contain only the ones you want to include in the tree building)
+# could also manually put custom sequences here to be included in the tree
+dir_rcsb: resources/rcsb_downloads
+
+# RCSB ids to download
+rcsb_ids:
+  - 3CX3
+  - 1N2Z
+  - 1N4A
+  - 1N4D 
+  - 2QI9
+  - 2CHU
+  - 2WHY
+  - 2WI8
+  - 1ESZ
+  - 1K2V
+  - 1K7S
+  - 3BE5
+  - 3BE6
+  - 3EIW
+  - 3EIX
+  - 2Q8P
+  - 2Q8Q
+  - 3GI1
+  - 1XVL
+  - 3HH8
+  - 2R79
+  - 1PSZ
+  - 2RG7
+  - 1K0F
+  - 1TOA
+  - 2PRS
+  - 2PS0 
+  - 2PS3
+  - 2PS9
+
+rcsb_ids_to_trim_on:
+
+
+# Resources for rules
+get_fasta_from_parquet:
+  threads: 16
+  mem_mb: 100000
+  runtime: "01:00:00"
+
+hmmsearch:
+  thresh_score: 30  # Only keep hits with score greater than or equal to
+  threads: 16
+  mem_mb: 10000
+  runtime: "01:00:00"
+
+get_db_seqs_to_cluster:
+  threads: 32
+  mem_mb: 10000
+  runtime: "01:00:00"
+
+cluster_db_seqs:
+  min_seq_id: 0.5
+  coverage: 0.75
+  cov_mode: 0
+  threads: 32
+  mem_mb: 100000
+  runtime: "01:00:00"
+
+align_db_crystal_seqs:
+  threads: 16
+  mem_mb: 100000
+  runtime: "01:00:00"
