@@ -1,0 +1,10 @@
+# Locations of data downloads for 
+# Metatranscriptome sequences and annotation tables
+# Isolate transcriptomes 
+dirs_data: 
+  metatranscriptomes: /scratch/bgrodner/metaT_data/old_pipeline_chris_parquets
+  isolates: data/shiri_isolates
+
+# Path for marferret-marmicrodb database download
+path_database: /mnt/nfs/projects/marferret/marmicrodb/MMDB_2024_04_14/MarFERReT.v1.1.1.MARMICRODB.2024_04_14.combined.faa.gz
+
