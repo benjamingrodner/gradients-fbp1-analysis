@@ -1,0 +1,6 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - conda-forge::biopython=1.87
+  - bioconda::clipkit=2.12.0

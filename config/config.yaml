@@ -9,8 +9,20 @@ dirs_data:
 # Path for marferret-marmicrodb database download
 path_database: /mnt/nfs/projects/marferret/marmicrodb/MMDB_2024_04_14/MarFERReT.v1.1.1.MARMICRODB.2024_04_14.combined.faa.gz
 
+# Path to scripts
+dir_scripts: workflow/scripts
+
 # output dir
 dir_out: results
+
+# wildcards to run from metat files
+batches:
+  - G1NS
+  - G1PA
+  - G2NS
+  - G2PA
+  - G3NS
+  - G3PA.UW
 
 # Paths to hmmprofiles and associated gene names
 dict_gene_hmmprofile:
@@ -33,8 +45,10 @@ dict_gene_hmmprofile:
 
 # Location to put known crystal structure sequences 
 # (should contain only the ones you want to include in the tree building)
-# could also manually put custom sequences here to be included in the tree
 dir_rcsb: resources/rcsb_downloads
+
+# could also manually put custom sequences here to be included in the tree
+dir_ref_man: resources/manuual_references
 
 # RCSB ids to download
 rcsb_ids:
@@ -68,25 +82,17 @@ rcsb_ids:
   - 2PS3
   - 2PS9
 
-rcsb_ids_to_trim_on:
-
-
 # Resources for rules
 get_fasta_from_parquet:
   threads: 16
   mem_mb: 100000
-  runtime: "01:00:00"
+  runtime: 60
 
 hmmsearch:
   thresh_score: 30  # Only keep hits with score greater than or equal to
-  threads: 16
+  threads: 8
   mem_mb: 10000
-  runtime: "01:00:00"
-
-get_db_seqs_to_cluster:
-  threads: 32
-  mem_mb: 10000
-  runtime: "01:00:00"
+  runtime: 60
 
 cluster_db_seqs:
   min_seq_id: 0.5
@@ -94,9 +100,28 @@ cluster_db_seqs:
   cov_mode: 0
   threads: 32
   mem_mb: 100000
-  runtime: "01:00:00"
+  runtime: 60
 
 align_db_crystal_seqs:
   threads: 16
   mem_mb: 100000
-  runtime: "01:00:00"
+  runtime: 60
+
+trim_alignment_gappy_columns:
+  gaps: 0.9
+  mode: kpic-gappy
+  threads: 4
+  mem_mb: 10000
+  runtime: 30
+
+filter_alignment:
+  frac_thresh: 0.25
+  threads: 8
+  mem_mb: 10000
+  runtime: 30
+
+build_tree:
+  threads: 16
+  mem_mb: 10000
+  runtime: 2800
+  model: PROTGAMMALGF

@@ -2,3 +2,7 @@ data/
 testing/
 results/
 .snakemake/
+resources/rcsb_downloads/
+benchmarks/
+logs/
+

@@ -5,4 +5,11 @@ min_version("9.1.0")
 
 include: "rules/common.smk"
 include: "rules/hmmsearch.smk"
+include: "rules/cluster.smk"
+include: "rules/alignment.smk"
 include: "rules/build_tree.smk"
+
+rule all:
+    input:
+        fn_ml_bootstrap,
+        fn_mrc,
