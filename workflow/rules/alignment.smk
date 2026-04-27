@@ -20,16 +20,33 @@ rule get_crystal_struct_seqs:
         """
 
 
+rule subset_db_clusts:
+    input:
+        fn_db_rep_seqs,
+    output:
+        fn_db_rep_seqs_sub,
+    params:
+        pct = config['subset_db_clusts']['pct'],
+    conda:
+        "../envs/seqkit.yaml"
+    shell:
+        """
+        seqkit sample -p {params.pct} {input:q} > {output:q}
+        """
+
+
+
+
 rule merge_clusters_with_crystal_struct_seqs:
     input:
-        fn_db_rep_seqs = fn_db_rep_seqs,
+        fn_db_rep_seqs_sub = fn_db_rep_seqs_sub,
         fns_crystal_seqs = expand(fmt_crystal_seqs, rcsb_id=config['rcsb_ids']),
         fns_manual_ref = glob.glob(config['dir_ref_man'] + '/*')
     output: 
         fn_db_crystal_seqs,
     shell:
         """
-        cat {input.fn_db_rep_seqs:q} > {output:q}
+        cat {input.fn_db_rep_seqs_sub:q} > {output:q}
         cat {input.fns_crystal_seqs:q} >> {output:q}
         for fn in {input.fns_manual_ref:q}; do
             cat "$fn" >> {output:q}
@@ -77,7 +94,7 @@ rule trim_alignment_based_on_crystal_seqs:
     params:
         formatted_ids = " -p ".join(config['rcsb_ids']),
     shell:
-        """        
+        r"""        
         # Get start and end positions
         seqkit grep -j {threads} -r -p {params.formatted_ids} {input:q}  \
             | seqkit replace -p '\s.+' -r '' \
@@ -151,3 +168,5 @@ rule filter_alignment:
             -f {params.frac_thresh:q} \
             2> {log:q}
         """
+
+

@@ -43,6 +43,14 @@ dict_gene_hmmprofile:
   mtnC: /scratch/bgrodner/Resources/KO_profiles/K11601.hmm
   mtnC2: /scratch/bgrodner/Resources/KO_profiles/K19975.hmm
 
+# Target taxnames to group things by
+ttaxnames:
+  - Bacillariophyta
+  - Haptophyta
+  - Chlorophyta
+  - Dinophyceae
+  - Pelagomonas
+
 # Location to put known crystal structure sequences 
 # (should contain only the ones you want to include in the tree building)
 dir_rcsb: resources/rcsb_downloads
@@ -95,12 +103,15 @@ hmmsearch:
   runtime: 60
 
 cluster_db_seqs:
-  min_seq_id: 0.5
-  coverage: 0.75
+  min_seq_id: "0.50" # In quotes for better filenaming
+  coverage: "0.75" # In quotes for better filenaming
   cov_mode: 0
   threads: 32
   mem_mb: 100000
   runtime: 60
+
+subset_db_clusts:
+  pct: "0.10"  # In quotes for better filenaming
 
 align_db_crystal_seqs:
   threads: 16
@@ -125,3 +136,16 @@ build_tree:
   mem_mb: 10000
   runtime: 2800
   model: PROTGAMMALGF
+
+group_env_stuff:
+  threads: 4
+  mem_mb: 10000
+  runtime: 30
+
+cluster_env_hitseqs:
+  min_seq_id: "0.90" # In quotes for better filenaming
+  coverage: "0.50" # In quotes for better filenaming
+  cov_mode: 1
+  threads: 1
+  mem_mb: 2000
+  runtime: 60

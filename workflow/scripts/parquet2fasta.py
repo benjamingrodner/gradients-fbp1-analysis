@@ -51,7 +51,7 @@ def main():
         with open(args.headers_file, 'r') as f:
             # Strips whitespace/newlines and ignores empty lines
             header_list = [line.strip() for line in f if line.strip()]
-        print(f"Filtering {args.input}...")
+        print(f"Filtering {args.input}, with {args.headers_file}...")
         
         t_seqs = t_seqs.filter(
             t_seqs[args.header_column].isin(header_list)

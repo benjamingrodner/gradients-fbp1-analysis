@@ -5,7 +5,7 @@
 #SBATCH --partition=main          # Partition/Queue name
 #SBATCH --nodes=1                     # Run on a single node
 #SBATCH --ntasks=1                    # Run a single task
-#SBATCH --cpus-per-task=4             # Number of CPU cores per file
+#SBATCH --cpus-per-task=1             # Number of CPU cores per file
 #SBATCH --mem=500G                      # Memory limit
 #SBATCH --time=2-00:00:00               # Time limit (hrs:min:sec)
 #SBATCH --output=logs/snakemake.log           # Standard output and error log (%j = JobID)
@@ -17,10 +17,12 @@ conda activate snakemake_host
 snakemake \
     --snakefile workflow/Snakefile \
     --configfile config/config.yaml \
-    --jobs 1 \
+    --jobs 32 \
+    --resources cores=32 \
     --use-conda \
     --printshellcmds \
     --rerun-incomplete \
+    --rerun-triggers mtime \
     --executor slurm \
     --default-resources \
         slurm_account="bgrodner" \
@@ -28,3 +30,5 @@ snakemake \
         mem_mb=$((1 * 1024)) \
         runtime=$((1 * 3600)) \
     --
+    
+    # -n \
