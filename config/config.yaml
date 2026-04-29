@@ -51,12 +51,16 @@ ttaxnames:
   - Dinophyceae
   - Pelagomonas
 
+target_genes:
+  - fbp1
+  - desE
+
 # Location to put known crystal structure sequences 
 # (should contain only the ones you want to include in the tree building)
 dir_rcsb: resources/rcsb_downloads
 
 # could also manually put custom sequences here to be included in the tree
-dir_ref_man: resources/manuual_references
+dir_ref_man: resources/manual_references
 
 # RCSB ids to download
 rcsb_ids:
@@ -113,7 +117,7 @@ cluster_db_seqs:
 subset_db_clusts:
   pct: "0.10"  # In quotes for better filenaming
 
-align_db_crystal_seqs:
+alignment:
   threads: 16
   mem_mb: 100000
   runtime: 60
@@ -131,12 +135,6 @@ filter_alignment:
   mem_mb: 10000
   runtime: 30
 
-build_tree:
-  threads: 16
-  mem_mb: 10000
-  runtime: 2800
-  model: PROTGAMMALGF
-
 group_env_stuff:
   threads: 4
   mem_mb: 10000
@@ -149,3 +147,34 @@ cluster_env_hitseqs:
   threads: 1
   mem_mb: 2000
   runtime: 60
+
+build_alignment_hmm:
+  threads: 8
+  mem_mb: 10000
+  runtime: 60
+
+deduplicate_alignment:
+  mem_mb: 10000
+
+fasttree_bootstraps:
+  n_bootstraps: 100
+  threads: 1
+  runtime: 30
+  mem_mb: 1000
+
+fasttree:
+  threads: 8
+  mem_mb: 10000
+  runtime: 120
+
+roguenarok:
+  threads: 8
+  mem_mb: 10000
+  runtime: 120
+  frac_of_improvement_to_use: 0.9  # If removing all of the rogues gives improvement of 1, what fraction of that improvement do you want. Default mode "elbow" finds the elbow of the curve (where diminishing returns start).
+
+build_tree:
+  threads: 16
+  mem_mb: 10000
+  runtime: 2800
+  model: PROTGAMMALGF

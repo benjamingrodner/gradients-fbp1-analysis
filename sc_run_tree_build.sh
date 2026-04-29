@@ -17,12 +17,12 @@ conda activate snakemake_host
 snakemake \
     --snakefile workflow/Snakefile \
     --configfile config/config.yaml \
-    --jobs 32 \
-    --resources cores=32 \
+    --jobs 16 \
     --use-conda \
     --printshellcmds \
     --rerun-incomplete \
     --rerun-triggers mtime \
+    --resources cores=16 \
     --executor slurm \
     --default-resources \
         slurm_account="bgrodner" \

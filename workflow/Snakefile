@@ -9,7 +9,8 @@ include: "rules/cluster_db.smk"
 include: "rules/alignment.smk"
 include: "rules/build_tree.smk"
 include: "rules/cluster_env.smk"
+include: "rules/env_tree_placement.smk"
 
 rule all:
     input:
-        fn_env_seqs_clust_cat,
+        fn_full_tree_done,

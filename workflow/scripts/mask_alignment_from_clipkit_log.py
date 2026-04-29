@@ -29,63 +29,98 @@
 # The all rule should target results/final_placement.jplace.
 # Include a sample config.yaml structure at the top of the response."
 
-
 import argparse
+import sys
 from Bio import AlignIO
-from Bio.Seq import MutableSeq
-from Bio.Align import MultipleSeqAlignment
+from Bio.Seq import Seq
+import pandas as pd
+import numpy as np
 
-def parse_clipkit_log(log_path):
-    """
-    Parses ClipKit log to find kept/trimmed sites.
-    Assumes log format contains indices of sites.
-    """
-    keep_indices = []
-    with open(log_path, 'r') as f:
-        for line in f:
-            # Example logic: extract site index from ClipKit 'keep' log
-            if "keep" in line.lower():
-                parts = line.split()
-                # Adjust based on specific ClipKit log version
-                try:
-                    idx = int(parts[1]) 
-                    keep_indices.append(idx)
-                except (ValueError, IndexError):
-                    continue
-    return keep_indices
+def mask_alignment(input_file, clip_log, output_file):
+    df = pd.read_csv(clip_log, sep='\s', header=None)
+    df.columns = ['colnum','keep_trim','reason','parsimony']
+    bool_keep = (df['keep_trim'].values == 'keep')
+
+    alignment = AlignIO.read(input_file, "fasta")
+    
+    for record in alignment:
+        seq_arr = np.array(record.seq)[bool_keep]
+        record.seq = Seq("".join(seq_arr))
+        
+    AlignIO.write(alignment, output_file, "fasta")
 
 def main():
-    parser = argparse.ArgumentParser(description="Mask FASTA alignment based on ClipKit log.")
-    parser.add_argument("--input", required=True, help="Input FASTA alignment")
-    parser.add_argument("--log", required=True, help="ClipKit log file")
-    parser.add_argument("--output", required=True, help="Output masked FASTA")
+    parser = argparse.ArgumentParser(description="Mask alignment columns via ClipKit log.")
+    parser.add_argument("-i", "--input", required=True)
+    parser.add_argument("-l", "--log_file", required=True)
+    parser.add_argument("-o", "--output", required=True)
     args = parser.parse_args()
-
-    # Load alignment
-    alignment = AlignIO.read(args.input, "fasta")
     
-    # In a real scenario, you'd identify which columns were 'trimmed' 
-    # and replace them with '-' in the query sequences.
-    # Here we assume the log provides 1-based indices of sites to MASK or KEEP.
-    
-    masked_records = []
-    for record in alignment:
-        seq_list = list(record.seq)
-        
-        # Example: If the log lists sites that SHOULD have been removed,
-        # we mask them with '-' to maintain alignment length for EPA.
-        # This logic assumes we are matching indices 1-to-1.
-        
-        # Placeholder for masking logic:
-        # for i in range(len(seq_list)):
-        #     if i + 1 not in keep_indices:
-        #         seq_list[i] = "-"
-        
-        record.seq = "".join(seq_list)
-        masked_records.append(record)
-
-    new_alignment = MultipleSeqAlignment(masked_records)
-    AlignIO.write(new_alignment, args.output, "fasta")
+    try:
+        mask_alignment(args.input, args.log_file, args.output)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
+
+# import argparse
+# from Bio import AlignIO
+# from Bio.Seq import MutableSeq
+# from Bio.Align import MultipleSeqAlignment
+
+# def parse_clipkit_log(log_path):
+#     """
+#     Parses ClipKit log to find kept/trimmed sites.
+#     Assumes log format contains indices of sites.
+#     """
+#     keep_indices = []
+#     with open(log_path, 'r') as f:
+#         for line in f:
+#             # Example logic: extract site index from ClipKit 'keep' log
+#             if "keep" in line.lower():
+#                 parts = line.split()
+#                 # Adjust based on specific ClipKit log version
+#                 try:
+#                     idx = int(parts[1]) 
+#                     keep_indices.append(idx)
+#                 except (ValueError, IndexError):
+#                     continue
+#     return keep_indices
+
+# def main():
+#     parser = argparse.ArgumentParser(description="Mask FASTA alignment based on ClipKit log.")
+#     parser.add_argument("--input", required=True, help="Input FASTA alignment")
+#     parser.add_argument("--log", required=True, help="ClipKit log file")
+#     parser.add_argument("--output", required=True, help="Output masked FASTA")
+#     args = parser.parse_args()
+
+#     # Load alignment
+#     alignment = AlignIO.read(args.input, "fasta")
+    
+#     # In a real scenario, you'd identify which columns were 'trimmed' 
+#     # and replace them with '-' in the query sequences.
+#     # Here we assume the log provides 1-based indices of sites to MASK or KEEP.
+    
+#     masked_records = []
+#     for record in alignment:
+#         seq_list = list(record.seq)
+        
+#         # Example: If the log lists sites that SHOULD have been removed,
+#         # we mask them with '-' to maintain alignment length for EPA.
+#         # This logic assumes we are matching indices 1-to-1.
+        
+#         # Placeholder for masking logic:
+#         # for i in range(len(seq_list)):
+#         #     if i + 1 not in keep_indices:
+#         #         seq_list[i] = "-"
+        
+#         record.seq = "".join(seq_list)
+#         masked_records.append(record)
+
+#     new_alignment = MultipleSeqAlignment(masked_records)
+#     AlignIO.write(new_alignment, args.output, "fasta")
+
+# if __name__ == "__main__":
+#     main()

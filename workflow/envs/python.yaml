@@ -4,3 +4,4 @@ dependencies:
   - conda-forge::ibis-framework=12.0.0
   - conda-forge::biopython=1.87
   - conda-forge::ete4=4.3.0
+  - conda-forge::matplotlib=3.10.9

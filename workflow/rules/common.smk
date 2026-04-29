@@ -1,4 +1,13 @@
 import glob
+import re
+
+def get_target_env_seqs(wildcards):
+    files = []
+    for gene in config["target_genes"]:
+        files.extend(glob.glob(
+            fmt_clustered_env_hitseqs.format(taxgene='*')
+        ))
+    return files
 
 
 def get_fns_seqs_to_search(wildcards):
@@ -71,25 +80,6 @@ fn_db_rep_seqs_sub = dir_clust_db + '/' + bn_clust + f'/db_clust_rep_seq_sub{sub
 fn_db_clusters = dir_clust_db + '/' + bn_clust + '/db_clust_cluster.tsv'
 bn_db_seqs = f'{bn_clust}_sub{sub}pct'
 
-# Alignment db
-dir_aln = config['dir_out'] + f'/alignment/db/{bn_db_seqs}'
-fmt_crystal_seqs = config['dir_rcsb'] + '/{rcsb_id}.fasta'
-fn_db_crystal_seqs = dir_aln + '/db_and_crystal_struct_seqs.fasta'
-fn_alignment = dir_aln + '/db_and_crystal_struct_seqs.aln'
-fn_trim_crystal = fn_alignment + '.trim_crystal'
-fn_trim_crystal_startend = fn_alignment + '.trim_crystal_startend'
-fn_trim_clip = fn_trim_crystal + '.clipkit'
-frac_range = str(config['filter_alignment']['frac_thresh'])
-fn_trim_clip_filt = fn_trim_clip + '.frac_range' + frac_range
-
-# Build DB Tree
-dir_tree = config['dir_out'] + f'/tree/db/{bn_db_seqs}'
-fn_ml_tree = dir_tree + '/ML/RAxML_bestTree.db_and_crystal_struct_seqs.tree'
-fn_bootstraps_done = dir_tree + '/bootstrap/RAxML_bootstrap.db_and_crystal_struct_seqs.done'
-fn_ml_bootstrap = dir_tree + '/ML-bootstrap/RAxML_bipartitions.db_and_crystal_struct_seqs.ml_bootstrap'
-fn_mrc = dir_tree + '/MRC/RAxML_result.db_and_crystal_struct_seqs.mrc'
-fn_full_tree_done = dir_tree + '/full_analysis/db_and_crystal_struct_seqs.done'
-
 # Cluster env
 dir_env_clust = config['dir_out'] + '/cluster/env'
 fmt_bigtable = (
@@ -107,9 +97,6 @@ fmt_env_hitnames = (
     dir_env_clust + '/{batch}/hitnames/' 
     + tg_prefix + '{taxgene}' + ext_env_hitnames
 )
-# fmt_env_hitseqs_dir = (
-#     dir_env_clust + '/hitseqs/{batch}'
-# )
 fmt_env_hitseqs = (
     dir_env_clust + '/{batch}/hitseqs/' + tg_prefix + '{taxgene}.faa'
 )
@@ -127,4 +114,57 @@ fmt_clustered_env_hitseqs = (
 )
 fn_env_seqs_clust_cat = (
     dir_env_clust + '/' + bn_env_clust + '/env_seqs_clust_cat.faa'
+)
+
+# Alignment
+dir_aln = config['dir_out'] + f'/alignment/db_{bn_db_seqs}-env_{bn_env_clust}'
+fmt_crystal_seqs = config['dir_rcsb'] + '/{rcsb_id}.fasta'
+fn_db_crystal_seqs = dir_aln + '/db-env-crystal-manual.fasta'
+fn_alignment = re.sub('.fasta','.aln',fn_db_crystal_seqs)
+fn_trim_crystal = fn_alignment + '.trim_crystal'
+fn_trim_crystal_startend = fn_alignment + '.trim_crystal_startend'
+fn_trim_clip = fn_trim_crystal + '.clipkit'
+frac_range = str(config['filter_alignment']['frac_thresh'])
+fn_trim_clip_filt = fn_trim_clip + '.len_filt' + frac_range
+fn_trim_clip_filt_dedup = fn_trim_clip_filt + '.dedup'
+fn_trim_clip_filt_dedup_map = fn_trim_clip_filt + '.json'
+
+# Build DB Tree
+dir_tree = config['dir_out'] + f'/tree/db/{bn_db_seqs}'
+bn_tree = 'db-crystal-manual'
+fn_alignment_noenv = f'{dir_tree}/{bn_tree}.aln.trim_crystal.clipkit.len_filt{frac_range}'
+fn_alignment_noenv_clip = f'{dir_tree}/{bn_tree}.aln.trim_crystal.clipkit.len_filt{frac_range}.clipkit'
+dir_fasttree = f'{dir_tree}/fasttree'
+dir_ft_boot = f'{dir_fasttree}/bootstraps'
+ext_bootstrap = '{rep}.fa'  # extension must be {rep}.fa 
+fmt_bootstrap_resample = dir_ft_boot + f'/resamples/rep_{ext_bootstrap}'
+bn_bootstrap_resample = re.sub(ext_bootstrap,'',fmt_bootstrap_resample)
+fmt_bootstrap_fasttree = dir_ft_boot + '/trees/rep_{rep}.tree'
+fn_bootstrap_fasttree_merged = dir_ft_boot + '/fasttree_boostraps_merged.tree'
+fn_fasttree = f'{dir_fasttree}/fasttree_full.tree'
+fn_headers_crystal_manual = f'{dir_tree}/crystal-manual.headers'
+dir_roguenarok = f'{dir_tree}/roguenarok'
+fn_roguenarok = f'{dir_roguenarok}/RogueNaRok_droppedRogues.{bn_tree}'  # Must be RogueNaRok_droppedRogues.<basename>
+fn_rogues_to_drop = f'{dir_roguenarok}/rogues_to_drop.{bn_tree}'  # Must be RogueNaRok_droppedRogues.<basename>
+fn_alignment_noenv_clip_drop = fn_alignment_noenv_clip + '.drop_rogues'
+fn_full_tree_done = f'{dir_tree}/raxml_tree_done.{bn_tree}'
+
+
+# Env tree placement
+dir_env_tree = f'{dir_tree}/env_placement/{bn_env_clust}'
+bn_env_target = ''
+for gene in config['target_genes']:
+    bn_env_target += gene + '_'
+bn_env_target += 'env_clust'
+fn_target_env_seqs_merged = f'{dir_env_tree}/{bn_env_target}.faa'
+fn_alignment_hmm = fn_alignment + '.hmm'
+fn_env_aligned_sto = f'{dir_env_tree}/{bn_env_target}-db_and_crystal_struct_seqs.aln.sto'
+fn_env_aligned_fasta = f'{dir_env_tree}/{bn_env_target}-db_and_crystal_struct_seqs.aln'
+fn_env_aligned_trim = fn_env_aligned_fasta + '.trim_crystal_startend'
+fn_env_aligned_trim_mask = fn_env_aligned_trim + '.mask'
+fn_env_aligned_trim_mask_filt = fn_env_aligned_trim_mask + '.fraclen_range' + frac_range
+fn_env_aligned_trim_mask_filt_dedup = fn_env_aligned_trim_mask_filt + '.deduplicate'
+fn_env_aligned_trim_mask_filt_dedup_map = fn_env_aligned_trim_mask_filt_dedup + '.json'
+fn_place_env_tree_done = (
+    f'{dir_env_tree}/tree-{bn_env_target}-db_and_crystal_struct_seqs.done'
 )

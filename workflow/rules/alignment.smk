@@ -40,34 +40,34 @@ rule subset_db_clusts:
 rule merge_clusters_with_crystal_struct_seqs:
     input:
         fn_db_rep_seqs_sub = fn_db_rep_seqs_sub,
+        fns_env_rep_seqs = get_target_env_seqs,
         fns_crystal_seqs = expand(fmt_crystal_seqs, rcsb_id=config['rcsb_ids']),
-        fns_manual_ref = glob.glob(config['dir_ref_man'] + '/*')
+        fns_manual_ref = glob.glob(config['dir_ref_man'] + '/*'),
     output: 
         fn_db_crystal_seqs,
     shell:
         """
         cat {input.fn_db_rep_seqs_sub:q} > {output:q}
+        cat {input.fns_env_rep_seqs:q} >> {output:q}
         cat {input.fns_crystal_seqs:q} >> {output:q}
-        for fn in {input.fns_manual_ref:q}; do
-            cat "$fn" >> {output:q}
-        done
+        cat {input.fns_manual_ref:q} >> {output:q}
         """ 
 
 
-rule align_db_crystal_seqs:
+rule alignment:
     input:
         fn_db_crystal_seqs,
     output:
         fn_alignment,
     log:
-        "logs/align_db_crystal_seqs.log"
+        "logs/alignment.log"
     benchmark:
-        "benchmarks/align_db_crystal_seqs.benchmark.txt"
+        "benchmarks/alignment.benchmark.txt"
     threads:
-        config['align_db_crystal_seqs']['threads'],
+        config['alignment']['threads'],
     resources:
-        mem_mb=config['align_db_crystal_seqs']['mem_mb'],
-        runtime=config['align_db_crystal_seqs']['runtime'],
+        mem_mb=config['alignment']['mem_mb'],
+        runtime=config['alignment']['runtime'],
     conda:
         "../envs/python.yaml"
     shell:
@@ -144,7 +144,7 @@ rule trim_alignment_gappy_columns:
             -m {params.mode} \
             --gaps {params.gaps} \
             -t {threads} \
-            -l  \
+            -l \
             2> {log:q}
         """
 
@@ -169,4 +169,26 @@ rule filter_alignment:
             2> {log:q}
         """
 
+rule deduplicate_alignment:
+    input:
+        fasta = fn_trim_clip_filt
+    output:
+        fasta = fn_trim_clip_filt_dedup,
+        mapping = fn_trim_clip_filt_dedup_map
+    log:
+        err = "logs/deduplicate_alignment.log"
+    conda:
+        "../envs/python.yaml"
+    resources:
+        mem_mb = config['deduplicate_alignment']['mem_mb']
+    params:
+        script = config['dir_scripts'] + "/deduplicate_alignment.py"
+    shell:
+        """
+        python {params.script:q} \
+            --input {input.fasta:q} \
+            --output {output.fasta:q} \
+            --map {output.mapping:q} \
+            2> {log.err:q}
+        """
 

@@ -1,4 +1,4 @@
-# Generated with Gemini 3 Flash, operating in the Free tier
+# Generated with Gemini 3 Flash, operating in the Free tier 27 Apr 2026
 # using the following prompt:
 
 # "Please generate a complete Snakemake pipeline for phylogenetic placement based on the following specifications.
@@ -29,125 +29,175 @@
 # The all rule should target results/final_placement.jplace.
 # Include a sample config.yaml structure at the top of the response."
 
-import os
-import glob
 
-configfile: "config.yaml"
+### Edited while troubleshooting
 
-def get_target_seqs(wildcards):
-    files = []
-    for gene in config["target_genes"]:
-        files.extend(glob.glob(f"{config['input_dir']}/*{gene}*.fasta"))
-    return files
-
-rule all:
+rule merge_env_seqs_to_place:
     input:
-        "results/final_placement.jplace"
-
-rule merge_seqs_to_place:
-    input:
-        get_target_seqs
+        get_target_env_seqs
     output:
-        merged = "work/merged_queries.fasta"
+        merged = fn_target_env_seqs_merged
     log:
-        "logs/merge_seqs.log"
+        "logs/merge_env_seqs_to_place.log"
     shell:
         "cat {input} > {output.merged} 2> {log}"
 
 rule build_alignment_hmm:
     input:
-        ref_msa = config["ref_msa"]
+        ref_msa = fn_alignment
     output:
-        hmm = "work/reference.hmm"
+        hmm = fn_alignment_hmm
     log:
-        "logs/hmmbuild.log"
+        "logs/build_alignment_hmm.log"
+    benchmark:
+        "benchmarks/build_alignment_hmm.benchmark.txt"
     conda:
         "../envs/hmmer.yaml"
-    threads: config["resources"]["threads"]
+    threads: config["build_alignment_hmm"]["threads"]
     resources:
-        mem_mb = config["resources"]["mem_mb"],
-        runtime = config["resources"]["runtime"]
+        mem_mb = config["build_alignment_hmm"]["mem_mb"],
+        runtime = config["build_alignment_hmm"]["runtime"]
     shell:
         "hmmbuild --cpu {threads} {output.hmm} {input.ref_msa} 2> {log}"
 
-rule align_seqs_to_place:
+rule align_env_seqs:
     input:
-        hmm = "work/reference.hmm",
-        queries = "work/merged_queries.fasta",
-        ref_msa = config["ref_msa"]
+        hmm = fn_alignment_hmm,
+        queries = fn_target_env_seqs_merged,
+        ref_msa = fn_alignment
     output:
-        aln = "work/queries_aligned.sto"
+        aln = fn_env_aligned_sto
     log:
-        "logs/hmmalign.log"
+        "logs/align_env_seqs.log"
     conda:
         "../envs/hmmer.yaml"
-    threads: config["resources"]["threads"]
     shell:
-        "hmmalign --cpu {threads} --trim --mapali {input.ref_msa} "
-        "{input.hmm} {input.queries} > {output.aln} 2> {log}"
+        "hmmalign --trim --mapali {input.ref_msa} "
+        "-o {output.aln} {input.hmm} {input.queries} 2> {log}"
 
-rule trim_alignment_by_index:
+rule trim_env_alignment_by_index:
     input:
-        aln = "work/queries_aligned.sto"
+        aln = fn_env_aligned_sto,
+        startend = fn_trim_crystal_startend,
     output:
-        trimmed = "work/queries_trimmed.fasta"
+        trimmed = fn_env_aligned_trim,
+        fa = fn_env_aligned_fasta,
     log:
-        "logs/trimming.log"
+        "logs/trim_env_alignment_by_index.log"
     conda:
         "../envs/seqkit.yaml"
-    params:
-        start = config["trim_indices"]["start"],
-        end = config["trim_indices"]["end"]
     shell:
-        "seqkit export fa {input.aln} 2> {log} | "
-        "seqkit subseq -r {params.start}:{params.end} > {output.trimmed} 2>> {log}"
+        """
+        seqmagick convert --output-format fasta {input.aln} {output.fa} 2> {log}
+        cat {input.startend:q} \
+            | (IFS=',' read -r start end; 
+                seqkit subseq -r "$start":"$end" {output.fa:q} \
+                > {output.trimmed:q} \
+                2>> {log:q}
+            )
+        """
 
-rule mask_alignment_by_log:
+rule mask_env_alignment_by_log:
     input:
-        aln = "work/queries_trimmed.fasta",
-        log_file = config["clipkit_log"]
+        aln = fn_env_aligned_trim,
+        log_file = fn_trim_clip + '.log'
     output:
-        masked = "work/queries_masked.fasta"
+        masked = fn_env_aligned_trim_mask
     log:
-        "logs/masking.log"
+        "logs/mask_env_alignment_by_log.log"
+    conda:
+        "../envs/python.yaml"
+    params:
+        script = config['dir_scripts'] + "/mask_alignment_from_clipkit_log.py"
+    shell:
+        "python {params.script} "
+        "--input {input.aln:q} "
+        "--log {input.log_file:q} "
+        "--output {output.masked} 2> {log}"
+
+rule filter_env_seqs_by_len:
+    input:
+        fn_env_aligned_trim_mask,
+    output:
+        fn_env_aligned_trim_mask_filt,
+    log:
+        "logs/filter_env_seqs_by_len.log",
+    params:
+        frac_thresh = config['filter_alignment']['frac_thresh'],
+        script = config['dir_scripts'] + "/filter_alignment.py"
     conda:
         "../envs/python.yaml"
     shell:
-        "python scripts/mask_alignment.py "
-        "--input {input.aln} "
-        "--log {input.log_file} "
-        "--output {output.masked} 2> {log}"
+        """
+        python {params.script:q} \
+            -i {input:q} \
+            -o {output:q} \
+            -f {params.frac_thresh:q} \
+            2> {log:q}
+        """
 
-rule append_alignment:
+rule deduplicate_env_alignment:
     input:
-        ref = config["ref_msa"],
-        query = "work/queries_masked.fasta"
+        fasta = fn_env_aligned_trim_mask_filt
     output:
-        combined = "work/combined_alignment.fasta"
+        fasta = fn_env_aligned_trim_mask_filt_dedup,
+        mapping = fn_env_aligned_trim_mask_filt_dedup_map
     log:
-        "logs/append.log"
-    shell:
-        "cat {input.ref} {input.query} > {output.combined} 2> {log}"
-
-rule place_seqs:
-    input:
-        msa = "work/combined_alignment.fasta",
-        tree = config["ref_tree"]
-    output:
-        jplace = "results/final_placement.jplace"
-    log:
-        "logs/raxml_epa.log"
+        err = "logs/deduplicate_env_alignment.log"
     conda:
-        "../envs/raxml.yaml"
-    threads: config["resources"]["threads"]
+        "../envs/python.yaml"
     resources:
-        mem_mb = config["resources"]["mem_mb"],
-        runtime = config["resources"]["runtime"]
+        mem_mb = config['deduplicate_alignment']['mem_mb']
     params:
-        model = config["model"],
-        prefix = "work/epa_run"
+        script = config['dir_scripts'] + "/deduplicate_alignment.py"
     shell:
-        "raxml-ng --epa --msa {input.msa} --tree {input.tree} "
-        "--model {params.model} --threads {threads} "
-        "--prefix {params.prefix} 2> {log} && "
-        "mv {params.prefix}.raxml.epa.jplace {output.jplace} 2>> {log}"
+        """
+        python {params.script:q} \
+            --input {input.fasta:q} \
+            --output {output.fasta:q} \
+            --map {output.mapping:q} 2> {log.err:q}
+        """
+
+rule place_env_on_tree:
+    input:
+        msa = fn_env_aligned_trim_mask_filt_dedup,
+        tree = fn_full_tree_done
+    output:
+        fn_place_env_tree_done
+    log:
+        "logs/place_env_on_tree.log"
+    benchmark:
+        "benchmarks/place_env_on_tree.benchmark.txt"
+    threads: config["build_tree"]["threads"]
+    resources:
+        mem_mb = config["build_tree"]["mem_mb"],
+        runtime = config["build_tree"]["runtime"]
+    params:
+        model = config["build_tree"]['model'],
+    shell:
+        """
+        DIR_OUT=$( dirname {output:q} )
+        CWD=$( pwd )
+        DIR_OUT="$CWD"/"$DIR_OUT"
+
+        BN=$( basename {output:q} )
+        BN="${{BN%.*}}"
+
+        TREE={input.tree}
+        DIR_TREE=$(dirname "$TREE")
+        BN_TREE=$(basename "$TREE")
+        BN_TREE="${{TREE%.*}}"
+        FN_TREE="$DIR_TREE"/RAxML_bestTree."$BN_TREE"
+        
+        raxmlHPC-PTHREADS-AVX \
+            -f v \
+            -w "$DIR_OUT" \
+            -s {input.msa} \
+            -t "$FN_TREE" \
+            -m {params.model} \
+            -T {threads} \
+            -n "$BN" \
+            2> {log}
+
+        cat "Done" > {output:q}
+        """

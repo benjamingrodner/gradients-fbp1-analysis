@@ -4,3 +4,4 @@ channels:
 dependencies:
   - bioconda::seqkit=2.13.0
   - conda-forge::pigz=2.8
+  - bioconda::seqmagick=0.8.4
