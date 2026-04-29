@@ -23,7 +23,8 @@ rule remove_gappy_columns_noenv_alignment:
     input:
         fn_alignment_noenv,
     output:
-        fn_alignment_noenv_clip,
+        clipped = fn_alignment_noenv_clip,
+        cliplog = fn_alignment_noenv_cliplog,
     log:
         "logs/remove_gappy_columns_noenv_alignment.log"
     conda:
@@ -33,7 +34,7 @@ rule remove_gappy_columns_noenv_alignment:
         clipkit {input:q} \
             -m gappy \
             -g 1.0 \
-            -o {output:q} \
+            -o {output.clipped:q} \
             -l \
             2> {log:q}
         """
@@ -223,6 +224,7 @@ rule full_tree_analysis:
         model = config['build_tree']['model'],
         w = dir_tree,
         bn = bn_tree,
+        n_boot = config['build_tree']['n_bootstraps']
     shell:
         """
         CWD=$( pwd )
@@ -236,7 +238,7 @@ rule full_tree_analysis:
             -f a \
             -x 42 \
             -p 42 \
-            -# autoMRE \
+            -# {params.n_boot} \
             2> {log:q}
         cat "Done" > {output:q}
         """

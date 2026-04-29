@@ -8,6 +8,7 @@ dirs_data:
 
 # Path for marferret-marmicrodb database download
 path_database: /mnt/nfs/projects/marferret/marmicrodb/MMDB_2024_04_14/MarFERReT.v1.1.1.MARMICRODB.2024_04_14.combined.faa.gz
+fn_db_tax: /mnt/nfs/projects/marferret/marmicrodb/MMDB_2024_04_14/MarFERReT.v1.1.1.MARMICRODB.2024_04_14.combined.uid2tax.tab.gz
 
 # Path to scripts
 dir_scripts: workflow/scripts
@@ -178,3 +179,93 @@ build_tree:
   mem_mb: 10000
   runtime: 2800
   model: PROTGAMMALGF
+  n_bootstraps: autoMRE_IGN  # For automatic number of bootstraps use autoMR/autoMRE/autoMRE_IGN
+
+dict_gene_substrate: {
+    'btuF': 'B12',
+    'desE': 'Hydroxamate siderophore',
+    'hmuT': 'Heme',
+    'fecB': 'Hydroxycarboxylate siderophore',
+    'btuF2': 'B12',
+    'mtsA': 'Iron',
+    'yclQ': 'Catecholate siderophore',
+    'fhuD':'Hydroxamate siderophore',
+    'fhuD2':'Hydroxamate siderophore',
+    'htsA':'Hydroxycarboxylate siderophore',
+    'znuA':'Zinc',
+    'znuA2':'Zinc',
+    'psaA':'Zinc',
+    'mtnC':'Manganese',
+    'mtnC2':'Manganese',
+    'fbp1': 'Hydroxamate siderophore',
+}
+
+dict_rcsb_substrate:
+  3CX3: 'Zinc'
+  1N2Z: 'B12'
+  1N4A: 'B12'
+  1N4D: 'B12'
+  2QI9: 'B12'
+  2CHU: 'Catecholate siderophore'
+  2WHY: 'Catecholate siderophore'
+  2WI8: 'Catecholate siderophore'
+  1ESZ: 'Hydroxamate siderophore'
+  1K2V: 'Hydroxamate siderophore'
+  1K7S: 'Hydroxamate siderophore'
+  3BE5: 'Hydroxamate siderophore'
+  3BE6: 'Hydroxamate siderophore'
+  3EIW: 'Hydroxycarboxylate siderophore'
+  3EIX: 'Hydroxycarboxylate siderophore'
+  2Q8P: 'Heme'
+  2Q8Q: 'Heme'
+  3GI1: 'Zinc'
+  1XVL: 'Manganese'
+  3HH8: 'Iron'
+  2R79: 'Heme'
+  1PSZ: 'Zinc'
+  2RG7: 'Heme'
+  1K0F: 'Manganese'
+  1TOA: 'Manganese'
+  2PRS: 'Zinc'
+  2PS0: 'Zinc'
+  2PS3: 'Zinc'
+  2PS9: 'Zinc'
+
+
+dict_cstrip_val_color: {
+  'Substrate':{ # Dark2
+      'Hydroxamate siderophore':'#e7298a',
+      'Hydroxycarboxylate siderophore':'#d95f02',
+      'Catecholate siderophore':'#7570b3',
+      'Heme':'#1b9e77',
+      'B12':'#66a61e',
+      'Iron':'#e6ab02',
+      'Zinc':'#a6761d',
+      'Manganese':'#666666',
+  },
+  'Taxon':{ # tab10
+      'Bacillariophyta':'#1f77b4',
+      'Haptophyta':'#ff7f0e',
+      'Chlorophyta':'#2ca02c',
+      'Dinophyceae':'#d62728',
+      'Actinomycetota':'#9467bd',
+      'Bacillota':'#8c564b',
+      'Cyanobacteriota':'#e377c2',
+      'Pseudomonadota':'#7f7f7f',
+      'Bacteria':'#bcbd22',
+      'Eukaryota':'#17becf',
+      'Archaea':'#222021',
+      'Pelagomonas':'#aec7e8',
+      'No_taxon_annotation': '#ffffff',
+  },
+  'Source':{
+      'Environmental_metatranscriptome':'#b4b4b4',
+      'Database':'#ffffff',
+      'Database_crystal_structure':'#ffffff',
+      'Environmental_isolate':'#b4b4b4',
+  },
+  'FBP1':{
+      'fbp1':'#933a16',
+      'not-fbp1':'#ffffff',
+  }
+}

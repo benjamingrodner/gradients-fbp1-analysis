@@ -75,9 +75,9 @@ cov = re.sub('0.','',str(config['cluster_db_seqs']['coverage']))
 mode = config['cluster_db_seqs']['cov_mode']
 bn_clust = f'mmseqs2_i{ident}_c{cov}_mode{mode}'
 fn_db_rep_seqs = dir_clust_db + '/' + bn_clust + '/db_clust_rep_seq.fasta'
+fn_db_clusters = dir_clust_db + '/' + bn_clust + '/db_clust_cluster.tsv'
 sub = re.sub('0.','',str(config['subset_db_clusts']['pct']))
 fn_db_rep_seqs_sub = dir_clust_db + '/' + bn_clust + f'/db_clust_rep_seq_sub{sub}pct.fasta'
-fn_db_clusters = dir_clust_db + '/' + bn_clust + '/db_clust_cluster.tsv'
 bn_db_seqs = f'{bn_clust}_sub{sub}pct'
 
 # Cluster env
@@ -134,6 +134,7 @@ dir_tree = config['dir_out'] + f'/tree/db/{bn_db_seqs}'
 bn_tree = 'db-crystal-manual'
 fn_alignment_noenv = f'{dir_tree}/{bn_tree}.aln.trim_crystal.clipkit.len_filt{frac_range}'
 fn_alignment_noenv_clip = f'{dir_tree}/{bn_tree}.aln.trim_crystal.clipkit.len_filt{frac_range}.clipkit'
+fn_alignment_noenv_cliplog = f'{fn_alignment_noenv_clip}.log'
 dir_fasttree = f'{dir_tree}/fasttree'
 dir_ft_boot = f'{dir_fasttree}/bootstraps'
 ext_bootstrap = '{rep}.fa'  # extension must be {rep}.fa 
@@ -156,15 +157,8 @@ bn_env_target = ''
 for gene in config['target_genes']:
     bn_env_target += gene + '_'
 bn_env_target += 'env_clust'
-fn_target_env_seqs_merged = f'{dir_env_tree}/{bn_env_target}.faa'
-fn_alignment_hmm = fn_alignment + '.hmm'
-fn_env_aligned_sto = f'{dir_env_tree}/{bn_env_target}-db_and_crystal_struct_seqs.aln.sto'
-fn_env_aligned_fasta = f'{dir_env_tree}/{bn_env_target}-db_and_crystal_struct_seqs.aln'
-fn_env_aligned_trim = fn_env_aligned_fasta + '.trim_crystal_startend'
-fn_env_aligned_trim_mask = fn_env_aligned_trim + '.mask'
-fn_env_aligned_trim_mask_filt = fn_env_aligned_trim_mask + '.fraclen_range' + frac_range
-fn_env_aligned_trim_mask_filt_dedup = fn_env_aligned_trim_mask_filt + '.deduplicate'
-fn_env_aligned_trim_mask_filt_dedup_map = fn_env_aligned_trim_mask_filt_dedup + '.json'
+bn_env_tree = f'{bn_env_target}-db-crystal-manual'
+fn_env_aligned_mask = f'{dir_env_tree}/{bn_env_tree}_masked.aln'
 fn_place_env_tree_done = (
-    f'{dir_env_tree}/tree-{bn_env_target}-db_and_crystal_struct_seqs.done'
+    f'{dir_env_tree}/tree_done.{bn_env_tree}'
 )
