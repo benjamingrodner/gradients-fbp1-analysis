@@ -66,25 +66,31 @@ fmt_table_hmm = bn_hmmsearch + ".tbl"
 fmt_table_hmm_domain = bn_hmmsearch + ".domain"
 fmt_stdout_hmm = bn_hmmsearch + ".stdout"
 fmt_hmm_hitnames = bn_hmmsearch + ".names"
+bn_hmm_genes = ''
+for gene in config['dict_gene_hmmprofile'].keys():
+    bn_hmm_genes += f'{gene}_'
+bn_hmm_genes = bn_hmm_genes.rstrip('_')
+
 fn_hmm_hitnames_all = (
-    dir_hmmsearch + "/hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
+    dir_hmmsearch + f"/{bn_hmm_genes}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
     + '_all.names'
 )
-fn_hmms_best_hit = dir_hmmsearch + '/hmms_best_hit.tsv'
+fn_hmms_best_hit = dir_hmmsearch + f'/{bn_hmm_genes}_hmms_best_hit.tsv'
 
 
 # Cluster db
 dir_clust_db = config['dir_out'] + '/cluster/db'
-fn_db_seqs_to_cluster = dir_clust_db + '/hmmhitseqs.fasta'
+fn_db_seqs_to_cluster = f'{dir_clust_db}/{bn_hmm_genes}_hmmhitseqs.fasta'
 ident = re.sub('0.','',str(config['cluster_db_seqs']['min_seq_id']))
 cov = re.sub('0.','',str(config['cluster_db_seqs']['coverage']))
 mode = config['cluster_db_seqs']['cov_mode']
 bn_clust = f'mmseqs2_i{ident}_c{cov}_mode{mode}'
-fn_db_rep_seqs = dir_clust_db + '/' + bn_clust + '/db_clust_rep_seq.fasta'
-fn_db_clusters = dir_clust_db + '/' + bn_clust + '/db_clust_cluster.tsv'
-sub = re.sub('0.','',str(config['subset_db_clusts']['pct']))
-fn_db_rep_seqs_sub = dir_clust_db + '/' + bn_clust + f'/db_clust_rep_seq_sub{sub}pct.fasta'
-bn_db_seqs = f'{bn_clust}_sub{sub}pct'
+dir_clust_db_genes = f'{dir_clust_db}/{bn_hmm_genes}_{bn_clust}'
+fn_db_rep_seqs = f'{dir_clust_db_genes}/db_clust_rep_seq.fasta'
+fn_db_clusters = f'{dir_clust_db_genes}/db_clust_cluster.tsv'
+sub = config['subset_db_clusts']['pct']
+fn_db_rep_seqs_sub = f'{dir_clust_db_genes}/db_clust_rep_seq_sub{sub}pct.fasta'
+bn_clust_sub = f'{bn_clust}_sub{sub}pct'
 
 # Cluster env
 dir_env_clust = config['dir_out'] + '/cluster/env'
@@ -119,11 +125,14 @@ fmt_clustered_env_hitseqs = (
     + tg_prefix + '{taxgene}_rep_seq.fasta'
 )
 fn_env_seqs_clust_cat = (
-    dir_env_clust + '/' + bn_env_clust + '/env_seqs_clust_cat.faa'
+    f'{dir_env_clust}/{bn_env_clust}/{bn_hmm_genes}_env_seqs_clust_cat.faa'
 )
 
 # Alignment
-dir_aln = config['dir_out'] + f'/alignment/db_{bn_db_seqs}-env_{bn_env_clust}'
+dir_aln = (
+    config['dir_out'] 
+    + f'/alignment/genes_{bn_hmm_genes}-db_{bn_clust_sub}-env_{bn_env_clust}'
+    )
 fmt_crystal_seqs = config['dir_rcsb'] + '/{rcsb_id}.fasta'
 fn_db_crystal_seqs = dir_aln + '/db-env-crystal-manual.fasta'
 fn_alignment = re.sub('.fasta','.aln',fn_db_crystal_seqs)
@@ -136,7 +145,7 @@ fn_trim_clip_filt_dedup = fn_trim_clip_filt + '.dedup'
 fn_trim_clip_filt_dedup_map = fn_trim_clip_filt + '.json'
 
 # Build DB Tree
-dir_tree = config['dir_out'] + f'/tree/db/{bn_db_seqs}'
+dir_tree = config['dir_out'] + f'/tree/backbone_{bn_hmm_genes}_{bn_clust_sub}'
 bn_tree = 'db-crystal-manual'
 fn_alignment_noenv = f'{dir_tree}/{bn_tree}.aln.trim_crystal.clipkit.len_filt{frac_range}'
 fn_alignment_noenv_clip = f'{dir_tree}/{bn_tree}.aln.trim_crystal.clipkit.len_filt{frac_range}.clipkit'
@@ -158,12 +167,12 @@ fn_full_tree_done = f'{dir_tree}/raxml_tree_done.{bn_tree}'
 
 
 # Env tree placement
-dir_env_tree = f'{dir_tree}/env_placement/{bn_env_clust}'
 bn_env_target = ''
 for gene in config['target_genes_for_env_placement']:
     bn_env_target += gene + '_'
-bn_env_target += 'env_clust'
-bn_env_tree = f'{bn_env_target}-db-crystal-manual'
+bn_env_target = bn_env_target.rstrip('_')
+dir_env_tree = f'{dir_tree}/env_placement/{bn_env_clust}/{bn_env_target}'
+bn_env_tree = f'env_{bn_env_target}-db_{bn_hmm_genes}-crystal-manual'
 fn_env_aligned_mask = f'{dir_env_tree}/{bn_env_tree}_masked.aln'
 fn_env_aligned_mask_dedup = f'{fn_env_aligned_mask}.dedup'
 fn_env_aligned_mask_dedup_map = f'{fn_env_aligned_mask_dedup}.map'

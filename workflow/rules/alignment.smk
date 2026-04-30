@@ -26,7 +26,7 @@ rule subset_db_clusts:
     output:
         fn_db_rep_seqs_sub,
     params:
-        pct = config['subset_db_clusts']['pct'],
+        pct = float(config['subset_db_clusts']['pct']) / 100,
     conda:
         "../envs/seqkit.yaml"
     shell:

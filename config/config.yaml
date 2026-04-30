@@ -34,21 +34,6 @@ fn_gene_info: resources/ko_info_table_type3_sbp.csv
 
 dict_gene_hmmprofile:
   fbp1: resources/fbp1.hmm
-  btuF: /scratch/bgrodner/Resources/KO_profiles/K25034.hmm
-  desE: /scratch/bgrodner/Resources/KO_profiles/K25287.hmm
-  hmuT: /scratch/bgrodner/Resources/KO_profiles/K25132.hmm
-  fecB: /scratch/bgrodner/Resources/KO_profiles/K25109.hmm
-  btuF2: /scratch/bgrodner/Resources/KO_profiles/K06858.hmm
-  mtsA: /scratch/bgrodner/Resources/KO_profiles/K11704.hmm
-  yclQ: /scratch/bgrodner/Resources/KO_profiles/K25282.hmm
-  fhuD: /scratch/bgrodner/Resources/KO_profiles/K23227.hmm
-  fhuD2: /scratch/bgrodner/Resources/KO_profiles/K25308.hmm
-  htsA: /scratch/bgrodner/Resources/KO_profiles/K25113.hmm
-  znuA: /scratch/bgrodner/Resources/KO_profiles/K11707.hmm
-  znuA2: /scratch/bgrodner/Resources/KO_profiles/K09815.hmm
-  psaA: /scratch/bgrodner/Resources/KO_profiles/K19971.hmm
-  mtnC: /scratch/bgrodner/Resources/KO_profiles/K11601.hmm
-  mtnC2: /scratch/bgrodner/Resources/KO_profiles/K19975.hmm
 
 # Target taxnames to group things by
 ttaxnames:
@@ -60,7 +45,6 @@ ttaxnames:
 
 target_genes_for_env_placement:
   - fbp1
-  - desE
 
 # Location to put known crystal structure sequences 
 # (should contain only the ones you want to include in the tree building)
@@ -74,35 +58,12 @@ fn_ref_man_info: resources/manual_references_info.csv
 fn_rcsb_table: resources/rcsb_table_type3_sbp.csv
 
 rcsb_ids:
-  - 3CX3
-  - 1N2Z
-  - 1N4A
-  - 1N4D 
-  - 2QI9
-  - 2CHU
-  - 2WHY
-  - 2WI8
   - 1ESZ
   - 1K2V
   - 1K7S
   - 3BE5
   - 3BE6
-  - 3EIW
-  - 3EIX
-  - 2Q8P
-  - 2Q8Q
-  - 3GI1
-  - 1XVL
-  - 3HH8
-  - 2R79
-  - 1PSZ
-  - 2RG7
-  - 1K0F
-  - 1TOA
-  - 2PRS
-  - 2PS0 
-  - 2PS3
-  - 2PS9
+
 
 # Resources for rules
 get_fasta_from_parquet:
@@ -125,7 +86,7 @@ cluster_db_seqs:
   runtime: 60
 
 subset_db_clusts:
-  pct: "0.10"  # In quotes for better filenaming
+  pct: "100"  # in percentage points so to subset 10% give "10"
 
 alignment:
   threads: 16
