@@ -1,14 +1,20 @@
 import glob
 import re
 
-def get_target_env_seqs(wildcards):
-    files = []
-    for gene in config["target_genes"]:
-        files.extend(glob.glob(
+def get_env_rep_seqs(wildcards):
+    return glob.glob(
             fmt_clustered_env_hitseqs.format(taxgene='*')
-        ))
-    return files
+        )
 
+def get_target_env_rep_seqs(wildcards):
+    fns = glob.glob(
+        fmt_clustered_env_hitseqs.format(taxgene='*')
+    )
+    out = []
+    for fn in fns:
+        if any([g in fn for g in config['target_genes_for_env_placement']]):
+            out.append(fn)
+    return out
 
 def get_fns_seqs_to_search(wildcards):
     fns = [fmt_seqs_fasta.format(batch=b) for b in config['batches']]
@@ -154,11 +160,15 @@ fn_full_tree_done = f'{dir_tree}/raxml_tree_done.{bn_tree}'
 # Env tree placement
 dir_env_tree = f'{dir_tree}/env_placement/{bn_env_clust}'
 bn_env_target = ''
-for gene in config['target_genes']:
+for gene in config['target_genes_for_env_placement']:
     bn_env_target += gene + '_'
 bn_env_target += 'env_clust'
 bn_env_tree = f'{bn_env_target}-db-crystal-manual'
 fn_env_aligned_mask = f'{dir_env_tree}/{bn_env_tree}_masked.aln'
+fn_env_aligned_mask_dedup = f'{fn_env_aligned_mask}.dedup'
+fn_env_aligned_mask_dedup_map = f'{fn_env_aligned_mask_dedup}.map'
+fn_env_aligned_mask_dedup_tfilt = f'{fn_env_aligned_mask_dedup}.target_gene_filt'
+fn_env_aligned_mask_dedup_tfilt_filt = f'{fn_env_aligned_mask_dedup_tfilt}.short_long_filt'
 fn_place_env_tree_done = (
     f'{dir_env_tree}/tree_done.{bn_env_tree}'
 )

@@ -58,7 +58,7 @@ ttaxnames:
   - Dinophyceae
   - Pelagomonas
 
-target_genes:
+target_genes_for_env_placement:
   - fbp1
   - desE
 
@@ -141,6 +141,7 @@ trim_alignment_gappy_columns:
 
 filter_alignment:
   frac_thresh: 0.25
+  frac_thresh_short_long: 0.9
   threads: 8
   mem_mb: 10000
   runtime: 30

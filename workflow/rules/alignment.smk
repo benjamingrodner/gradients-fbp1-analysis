@@ -40,7 +40,7 @@ rule subset_db_clusts:
 rule merge_clusters_with_crystal_struct_seqs:
     input:
         fn_db_rep_seqs_sub = fn_db_rep_seqs_sub,
-        fns_env_rep_seqs = get_target_env_seqs,
+        fns_env_rep_seqs = get_env_rep_seqs,
         fns_crystal_seqs = expand(fmt_crystal_seqs, rcsb_id=config['rcsb_ids']),
         fns_manual_ref = glob.glob(config['dir_ref_man'] + '/*'),
     output: 
