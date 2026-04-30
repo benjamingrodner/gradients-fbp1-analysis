@@ -84,9 +84,11 @@ class TaxonCache:
 
 def main():
     parser = argparse.ArgumentParser(description="Process FASTA files into an annotated table.")
-    parser.add_argument("-i", "--input", required=True, help="Path to CSV (target_name, source_file)")
+    parser.add_argument("-i", "--input", required=True, help="Fasta filename")
+    parser.add_argument("-ht", "--hmm_table", required=True, help="Path to CSV (target_name, source_file)")
     parser.add_argument("-u", "--uid2tax", required=True, help="Database taxon mapping")
-    parser.add_argument("--ttaxnames", nargs='+', required=True, help="List of taxnames to group things by.")
+    parser.add_argument("-gt", "--gene_table", required=True, help="Table with (gene_name,substrate)")
+    parser.add_argument("-tn", "--ttaxnames", nargs='+', required=True, help="List of taxnames to group things by.")
     parser.add_argument("-o", "--output", required=True, help="Output filename (.csv or .tsv)")
     args = parser.parse_args()
 
@@ -104,24 +106,46 @@ def main():
             _, header, tax, _ = line.split()
             dict_marfmmdb_tax[header] = tax
 
+    df_gene = pd.read_csv(args.gene_table)
+    dict_gene_substrate = dict(zip(df_gene['gene_name'].values, df_gene['substrate'].values))
+
+    df_hmm = pd.read_csv(args.hmm_table, sep='\t')
+    dict_header_gene = dict(zip(df_hmm['target_name'].values, df_hmm['source_file'].values))
+
     # Process file
     df = pd.read_csv(args.input, sep='\t')
     pattern = re.compile(r"^(?P<gene>[^_]+)_hmmsearch")
     all_data = []
     try:
-        for header, source in df[['target_name','source_file']]:
+        for record in SeqIO.parse(args.input, "fasta"):
+            header = record.id
+            # tax info
             tid = dict_marfmmdb_tax.get(header)
-            if tid is not None:
-                s = os.path.basename(source)
-                gene = pattern.search(s).group('gene')
-                taxon_name = lookup_service.get_targettaxname(tid, args.ttaxnames)
-                domain = lookup_service.get_domain(taxon_name)
-                all_data.append({
-                    "Sequence_ID": header,
-                    "Taxon": taxon_name,
-                    "Gene": gene,
-                    "Domain": domain,
-                    "Source": "Database"
+            if (tid is not None):
+                if (int(tid) > 0):
+                    taxon_name = lookup_service.get_targettaxname(tid, args.ttaxnames)
+                    domain = lookup_service.get_domain(taxon_name)
+                else:
+                    taxon_name = 'No_taxon_annotation'
+                    domain = 'No_taxon_annotation'
+            else:
+                raise ValueError(f'Header {header} is not in the marfmmdb')
+            # gene info
+            filepath = dict_header_gene.get(header)
+            if filepath is not None:
+                filename = os.path.basename(filepath)
+                gene = pattern.search(filename).group('gene')
+                substrate = dict_gene_substrate[gene]
+            else:
+                raise ValueError(f'Header {header} is not in the hmmsearch best hits table')
+            # build table
+            all_data.append({
+                "Sequence_ID": header,
+                "Taxon": taxon_name,
+                "Gene": gene,
+                "Domain": domain,
+                "Substrate": substrate,
+                "Source": "Database"
                 })
     except Exception as e:
         print(f"Error parsing sequences in {args.input}: {e}")

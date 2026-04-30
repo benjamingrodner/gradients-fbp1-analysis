@@ -162,3 +162,23 @@ fn_env_aligned_mask = f'{dir_env_tree}/{bn_env_tree}_masked.aln'
 fn_place_env_tree_done = (
     f'{dir_env_tree}/tree_done.{bn_env_tree}'
 )
+fn_place_env_tree = (
+    f'{dir_env_tree}/RAxML_labelledTree.{bn_env_tree}'
+)
+
+# Tree annotation
+dir_annot = f'{dir_env_tree}/annotation'
+fn_table_annotate_env = f'{dir_annot}/annotations_env.csv'
+fn_table_annotate_db = f'{dir_annot}/annotations_db.csv'
+fn_table_annotate_crystal = f'{dir_annot}/annotations_crystal.csv'
+fn_table_annotate_manual = f'{dir_annot}/annotations_manual.csv'
+fn_table_annotations = f'{dir_annot}/annotations_merge.csv'
+fn_taxon_colorstrip = f'{dir_annot}/Taxon_colorstrip.txt'
+fn_domain_colorstrip = f'{dir_annot}/Domain_colorstrip.txt'
+fn_substrate_treecolors = f'{dir_annot}/Substrate_treecolors.txt'
+fn_source_treecolors = f'{dir_annot}/Source_treecolors.txt'
+fn_fbp1_colorstrip = f'{dir_annot}/Gene_colorstrip.txt'
+# fn_crystal_symbol = f'{dir_annot}/crystal_symbol.txt'
+
+
+

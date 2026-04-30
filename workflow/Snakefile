@@ -10,7 +10,8 @@ include: "rules/alignment.smk"
 include: "rules/build_tree.smk"
 include: "rules/cluster_env.smk"
 include: "rules/env_tree_placement.smk"
+include: "rules/annotate_tree.smk"
 
 rule all:
     input:
-        fn_full_tree_done,
+        fn_fbp1_colorstrip,

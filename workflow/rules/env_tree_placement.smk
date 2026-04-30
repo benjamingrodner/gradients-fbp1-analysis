@@ -21,7 +21,7 @@ rule mask_env_alignment_by_db_clip_log:
 rule place_env_on_tree:
     input:
         msa = fn_env_aligned_mask,
-        tree = fn_full_tree_done
+        tree_done = fn_full_tree_done
     output:
         fn_place_env_tree_done
     log:
@@ -53,5 +53,5 @@ rule place_env_on_tree:
             -n {params.bn_out:q} \
             2> {log}
 
-        cat "Done" > {output:q}
+        echo "Done" > {output.tree_done:q}
         """

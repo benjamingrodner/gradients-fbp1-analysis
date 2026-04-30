@@ -57,7 +57,7 @@ class TaxonCache:
         except Exception as e:
             return f"Error: {str(e)}"
 
-def process_files(input_files, taxon_lookup):
+def process_files(input_files, taxon_lookup, dict_gene_substrate):
     all_data = []
     
     # Regex pattern: TaxonName_GeneName.fasta
@@ -78,6 +78,7 @@ def process_files(input_files, taxon_lookup):
         taxon_name = match.group('taxon')
         gene_name = match.group('gene')
         domain = taxon_lookup.get_domain(taxon_name)
+        substrate = dict_gene_substrate[gene_name]
 
         # Parse FASTA sequences
         try:
@@ -87,6 +88,7 @@ def process_files(input_files, taxon_lookup):
                     "Taxon": taxon_name,
                     "Gene": gene_name,
                     "Domain": domain,
+                    "Substrate": substrate,
                     "Source": "Environmental metatranscriptome"
                 })
         except Exception as e:
@@ -97,6 +99,7 @@ def process_files(input_files, taxon_lookup):
 def main():
     parser = argparse.ArgumentParser(description="Process FASTA files into an annotated table.")
     parser.add_argument("-i", "--input", nargs='+', required=True, help="Input FASTA file(s)")
+    parser.add_argument("-t", "--table", required=True, help="Table with (gene_name,substrate)")
     parser.add_argument("-o", "--output", required=True, help="Output filename (.csv or .tsv)")
     args = parser.parse_args()
 
@@ -104,9 +107,12 @@ def main():
     print("Initializing NCBI Database...")
     lookup_service = TaxonCache()
 
+    df = pd.read_csv(args.table)
+    dict_gene_substrate = dict(zip(df['gene_name'].values, df['substrate'].values))
+
     # Process files
     print(f"Processing {len(args.input)} files...")
-    data = process_files(args.input, lookup_service)
+    data = process_files(args.input, lookup_service, dict_gene_substrate)
 
     if not data:
         print("No data extracted. Check your file formats and paths.")

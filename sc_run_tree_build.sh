@@ -22,13 +22,14 @@ snakemake \
     --printshellcmds \
     --rerun-incomplete \
     --rerun-triggers mtime \
-    --resources cores=16 \
-    --executor slurm \
-    --default-resources \
-        slurm_account="bgrodner" \
-        slurm_partition="main" \
-        mem_mb=$((1 * 1024)) \
-        runtime=$((1 * 3600)) \
-    --
+    -R get_itol_annotations 
+    # --resources cores=16 \
+    # --executor slurm \
+    # --default-resources \
+    #     slurm_account="bgrodner" \
+    #     slurm_partition="main" \
+    #     mem_mb=$((1 * 1024)) \
+    #     runtime=$((1 * 3600)) \
+    # --
     
     # -n \

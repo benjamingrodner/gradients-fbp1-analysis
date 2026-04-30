@@ -16,6 +16,9 @@ dir_scripts: workflow/scripts
 # output dir
 dir_out: results
 
+# Path to this config file
+fn_config: config/config.yaml
+
 # wildcards to run from metat files
 batches:
   - G1NS
@@ -26,6 +29,9 @@ batches:
   - G3PA.UW
 
 # Paths to hmmprofiles and associated gene names
+fn_gene_info: resources/ko_info_table_type3_sbp.csv
+
+
 dict_gene_hmmprofile:
   fbp1: resources/fbp1.hmm
   btuF: /scratch/bgrodner/Resources/KO_profiles/K25034.hmm
@@ -62,8 +68,11 @@ dir_rcsb: resources/rcsb_downloads
 
 # could also manually put custom sequences here to be included in the tree
 dir_ref_man: resources/manual_references
+fn_ref_man_info: resources/manual_references_info.csv
 
 # RCSB ids to download
+fn_rcsb_table: resources/rcsb_table_type3_sbp.csv
+
 rcsb_ids:
   - 3CX3
   - 1N2Z
@@ -181,57 +190,6 @@ build_tree:
   model: PROTGAMMALGF
   n_bootstraps: autoMRE_IGN  # For automatic number of bootstraps use autoMR/autoMRE/autoMRE_IGN
 
-dict_gene_substrate: {
-    'btuF': 'B12',
-    'desE': 'Hydroxamate siderophore',
-    'hmuT': 'Heme',
-    'fecB': 'Hydroxycarboxylate siderophore',
-    'btuF2': 'B12',
-    'mtsA': 'Iron',
-    'yclQ': 'Catecholate siderophore',
-    'fhuD':'Hydroxamate siderophore',
-    'fhuD2':'Hydroxamate siderophore',
-    'htsA':'Hydroxycarboxylate siderophore',
-    'znuA':'Zinc',
-    'znuA2':'Zinc',
-    'psaA':'Zinc',
-    'mtnC':'Manganese',
-    'mtnC2':'Manganese',
-    'fbp1': 'Hydroxamate siderophore',
-}
-
-dict_rcsb_substrate:
-  3CX3: 'Zinc'
-  1N2Z: 'B12'
-  1N4A: 'B12'
-  1N4D: 'B12'
-  2QI9: 'B12'
-  2CHU: 'Catecholate siderophore'
-  2WHY: 'Catecholate siderophore'
-  2WI8: 'Catecholate siderophore'
-  1ESZ: 'Hydroxamate siderophore'
-  1K2V: 'Hydroxamate siderophore'
-  1K7S: 'Hydroxamate siderophore'
-  3BE5: 'Hydroxamate siderophore'
-  3BE6: 'Hydroxamate siderophore'
-  3EIW: 'Hydroxycarboxylate siderophore'
-  3EIX: 'Hydroxycarboxylate siderophore'
-  2Q8P: 'Heme'
-  2Q8Q: 'Heme'
-  3GI1: 'Zinc'
-  1XVL: 'Manganese'
-  3HH8: 'Iron'
-  2R79: 'Heme'
-  1PSZ: 'Zinc'
-  2RG7: 'Heme'
-  1K0F: 'Manganese'
-  1TOA: 'Manganese'
-  2PRS: 'Zinc'
-  2PS0: 'Zinc'
-  2PS3: 'Zinc'
-  2PS9: 'Zinc'
-
-
 dict_cstrip_val_color: {
   'Substrate':{ # Dark2
       'Hydroxamate siderophore':'#e7298a',
@@ -259,13 +217,17 @@ dict_cstrip_val_color: {
       'No_taxon_annotation': '#ffffff',
   },
   'Source':{
-      'Environmental_metatranscriptome':'#b4b4b4',
+      'Environmental metatranscriptome':'#b4b4b4',
       'Database':'#ffffff',
-      'Database_crystal_structure':'#ffffff',
-      'Environmental_isolate':'#b4b4b4',
+      'Crystal structure':'#ffffff',
+      'Environmental isolate':'#b4b4b4',
   },
-  'FBP1':{
-      'fbp1':'#933a16',
-      'not-fbp1':'#ffffff',
+  'Gene':{
+      'fbp1':'#000000',
+  },
+  'Domain':{
+      'Eukaryota':'#6930c3',
+      'Bacteria':'#80ffdb',
+      'Archaea':'#48bfe3',
   }
 }

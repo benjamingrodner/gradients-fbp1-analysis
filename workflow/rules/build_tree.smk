@@ -240,5 +240,5 @@ rule full_tree_analysis:
             -p 42 \
             -# {params.n_boot} \
             2> {log:q}
-        cat "Done" > {output:q}
+        echo "Done" > {output:q}
         """
