@@ -17,12 +17,11 @@ conda activate snakemake_host
 snakemake \
     --snakefile workflow/Snakefile \
     --configfile config/config.yaml \
-    --jobs 16 \
+    --jobs 17 \
     --use-conda \
     --printshellcmds \
     --rerun-incomplete \
-    --rerun-triggers mtime \
-    -R get_itol_annotations 
+    --rerun-triggers mtime 
     # --resources cores=16 \
     # --executor slurm \
     # --default-resources \
