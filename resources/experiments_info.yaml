@@ -1,0 +1,88 @@
+amphora-graff_van_creveld_et_al_2023:
+    method_assembly: download
+    link_assembly: "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE217nnn/GSE217467/suppl/GSE217467%5Famphora.trinity.fasta.gz"
+    method_counts: salmon-biosamples
+    biosamples: ["SAMN31645508","SAMN31645507","SAMN31645506","SAMN31645505","SAMN31645504","SAMN31645503","SAMN31645502","SAMN31645501"]
+chaetoceros-graff_van_creveld_et_al_2023:
+    method_assembly: download
+    link_assembly: "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE217nnn/GSE217467/suppl/GSE217467%5Fchaetoceros.trinity.fasta.gz",
+    method_counts: salmon-biosamples
+    biosamples: ["SAMN31645494","SAMN31645493","SAMN31645492","SAMN31645491","SAMN31645490"]
+cylindrotheca-graff_van_creveld_et_al_2023:
+    method_assembly: download
+    link_assembly: "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE217nnn/GSE217467/suppl/GSE217467%5Fcylindrotheca.trinity.fasta.gz",
+    method_counts: salmon-biosamples
+    biosamples: ["SAMN31645500","SAMN31645499","SAMN31645498","SAMN31645497","SAMN31645496","SAMN31645495"]
+t_oceanica-graff_van_creveld_et_al_2023:
+    method_assembly: download
+    link_assembly: "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/296/195/GCA_000296195.2_ThaOc_1.0/GCA_000296195.2_ThaOc_1.0_cds_from_genomic.fna.gz",
+    method_counts: salmon-biosamples
+    biosamples: ["SAMN31645517","SAMN31645516","SAMN31645515","SAMN31645514","SAMN31645513","SAMN31645512","SAMN31645511","SAMN31645510","SAMN31645509"]
+t_pseudonana-graff_van_creveld_et_al_2023:
+    method_assembly: download
+    link_assembly: "https://ftp.ebi.ac.uk/ensemblgenomes/pub/protists/current/fasta/thalassiosira_pseudonana/cds/Thalassiosira_pseudonana.ASM14940v2.cds.all.fa.gz",
+    method_counts: salmon-biosamples
+    biosamples: ["SAMN31645526","SAMN31645525","SAMN31645524","SAMN31645523","SAMN31645522","SAMN31645521","SAMN31645520","SAMN31645519","SAMN31645518"]
+phatr_timeseries-smith_et_al_2016:
+    method_assembly: download
+    link_assembly: "https://ftp.ebi.ac.uk/ensemblgenomes/pub/protists/current/fasta/phaeodactylum_tricornutum/cds/Phaeodactylum_tricornutum.ASM15095v2.cds.all.fa.gz"
+    method_counts: salmon-bioproject
+    bioproject: PRJNA310815
+p_antarctica-rizkallah_et_al_2020:
+    method_assembly: download
+    links_assemblies: "https://sra-download.ncbi.nlm.nih.gov/traces/wgs03/wgs_aux/GF/UQ/GFUQ01/GFUQ01.1.fsa_nt.gz"
+    method_counts: download
+    links_counts: "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE102nnn/GSE102608/suppl/GSE102608%5FPant%5FS2%5FFile%5FGenes%5Fallrep.counts.matrix.txt.gz"
+    bioproject: PRJNA395466
+c_closterium_uga4-quirk_sunda_cohen_2025:
+    method_assembly: from_author
+    fn_assembly: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/assemblies/predict_orfs_04.pep.gz
+    method_counts: from_author-glob
+    glob_counts: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/counts/c_closterium_uga4/*
+    bioproject: PRJNA1106502
+c_closterium_uga8-quirk_sunda_cohen_2025:
+    method_assembly: from_author
+    fn_assembly: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/assemblies/predict_orfs_08.pep.gz
+    method_counts: from_author-glob
+    glob_counts: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/counts/c_closterium_uga8/*
+    bioproject: PRJNA1106502
+g_huxleyii_uga13-quirk_sunda_cohen_2025:
+    method_assembly: from_author
+    fn_assembly: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/assemblies/predict_orfs_06.pep.gz
+    method_counts: from_author-glob
+    glob_counts: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/counts/g_huxleyii_uga13/*
+    bioproject: PRJNA1106502
+g_oceanica_uga13-quirk_sunda_cohen_2025:
+    method_assembly: from_author
+    fn_assembly: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/assemblies/predict_orfs_13.pep.gz
+    method_counts: from_author-glob
+    glob_counts: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/counts/g_oceanica_uga13/*
+    bioproject: PRJNA1106502
+phatr_starvation-villar_et_al_2025:
+    method_assembly: download
+    links_assembly: "https://ftp.ebi.ac.uk/ensemblgenomes/pub/protists/current/fasta/phaeodactylum_tricornutum/cds/Phaeodactylum_tricornutum.ASM15095v2.cds.all.fa.gz"
+    method_counts: salmon-bioproject
+    bioproject: PRJNA936812
+    elink_target: sra
+micromonas-meyer_et_al_2025:
+    method_assembly: from_author
+    glob_assembly: data/experiments/micromonas-meyer_et_al_2025/Bathymega_assembly.fasta.gz
+    method_counts: from_author
+    glob_counts: data/experiments/micromonas-meyer_et_al_2025/contig_counts.csv
+    bioproject: PRJNA1072555
+p_granii-cohen_et_al_2018:
+    method_assembly: download
+    link_assembly: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/Trinity.fasta"
+    method_counts: download
+    link_counts: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/query_KO_bowtiecounts.tab"
+chlorella-mansfeldt_et_al_2016:
+    method_assembly: download
+    links_assemblies: "https://doi.org/10.1371/journal.pone.0147527.s005"
+    method_counts: download
+    links_counts: "https://doi.org/10.1371/journal.pone.0147527.s006"
+# karlodinium-jang_et_al_2025:
+#     method_assembly: from_author
+#     method_counts: from_author
+
+
+

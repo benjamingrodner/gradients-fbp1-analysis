@@ -1,6 +1,29 @@
 import glob
 import re
 
+def get_fn_exp_assembly(exp):
+    method = DICT_EXP[exp]['method_assembly']
+    if method == 'download':
+        d = dir_exp_download_assembly.format(exp_download_assembly=exp)
+        return glob.glob(f'{d}/*')[0]  # can only have one file for assembly
+    elif method == 'from_author':
+        return DICT_EXP[exp]['fn_assembly']
+    else:
+        raise ValueError(f"Method {method} is not available for getting the experiment assembly")
+
+def get_dirs_download_assembly(wildcards):
+    dirs = []
+    for exp, dict_info in DICT_EXP.values():
+        if dict_info['method_assembly'] == 'download':
+            d = dir_exp_download_assembly.format(exp_download_assembly=exp)
+            # fn = glob.glob(f'{d}/*')[0]  # can only have one file for assembly
+            dirs.append(d)
+    return dirs
+
+def get_elink_target(exp):
+    alt = DICT_EXP[exp].get('elink_target')
+    return 'biosample' if alt is None else alt
+
 def get_env_rep_seqs(wildcards):
     return glob.glob(
             fmt_clustered_env_hitseqs.format(taxgene='*')
@@ -46,10 +69,13 @@ def aggregate_env_clusters(wildcards):
     ]
     return out
 
-
+# Global 
 GENES = list(config['dict_gene_hmmprofile'].keys())
 BATCHES = list(config['batches'])
+with open(config['fn_experiment_info'], 'r') as f:
+    DICT_EXP = yaml.safe_load(f)
 
+# Data format
 fmt_seqs_parquet = (
     config['dirs_data']['metatranscriptomes'] 
     + "/seqs-{batch}.parquet"
@@ -190,5 +216,33 @@ fn_source_treecolors = f'{dir_annot}/Source_treecolors.txt'
 fn_fbp1_colorstrip = f'{dir_annot}/Gene_colorstrip.txt'
 # fn_crystal_symbol = f'{dir_annot}/crystal_symbol.txt'
 
+# Hmmsearch isolates
+dir_exp = config['dirs_data']['experiments']
+dir_exp_download_assembly = dir_exp + '/{exp_download_assembly}/assembly'
+fn_download_assemblies_done = dir_download_assembly + "/done.txt"
+bn_hmm_exp = (
+    dir_exp + '/{exp}/hmmsearch/{gene}'
+    + '/hmmsearch_T' + str(config['hmmsearch']['thresh_score'])
+)
+fmt_table_hmm_exp = bn_hmm_exp + '.tbl'
+fmt_table_hmm_domain_exp = bn_hmm_exp + '.domtab'
+fmt_stdout_hmm_exp = bn_hmm_exp + '.out'
+fmt_hmm_hitnames_exp = bn_hmm_exp + '.hitnames'
+fn_hmm_hitnames_exp_all = dir_exp + '/{exp}/hmmsearch/hmmsearch_headers_merged.txt'
+fmt_hmms_best_hit_exp = dir_exp + '/{exp}/hmmsearch/hmmsearch_best_hit.tsv'
+fmt_hmms_best_hit_exp = dir_exp + '/{exp}/hmmsearch/hmmsearch_best_hit.tsv'
+fmt_exp_hitnames_grouped_gene = dir_exp + '/{exp}/hmmsearch/{gene}/hitnames_best_hit.txt'
 
+# Cluster isolates
+ident = re.sub('0.','',str(config['cluster_exp_hitseqs']['min_seq_id']))
+cov = re.sub('0.','',str(config['cluster_exp_hitseqs']['coverage']))
+mode = config['cluster_exp_hitseqs']['cov_mode']
+bn_exp_clust = f'mmseqs2_i{ident}_c{cov}_mode{mode}'
+dir_exp_clust = dir_exp + '/{exp}/cluster/' + bn_exp_clust + '/{gene}'
+fmt_exp_seqs_to_cluster = f'{dir_exp_clust}/seqs_to_cluster.fasta'
+fmt_exp_rep_seqs = f'{dir_exp_clust}/exp_clust_rep_seq.fasta'
+fmt_exp_clusters = f'{dir_exp_clust}/exp_clust_cluster.tsv'
 
+# isolate experiment counts
+fmt_bioproject_info = dir_exp + '/{iso_bioproject}/bioproject_info.txt'
+dir_fastq = dir_exp + '/{iso_bioproject}/reads'

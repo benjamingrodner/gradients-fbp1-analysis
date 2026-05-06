@@ -5,10 +5,12 @@ min_version("9.1.0")
 
 include: "rules/common.smk"
 include: "rules/hmmsearch.smk"
+include: "rules/hmmsearch_experiment.smk"
 include: "rules/cluster_db.smk"
 include: "rules/alignment.smk"
 include: "rules/build_tree.smk"
 include: "rules/cluster_env.smk"
+include: "rules/cluster_exp.smk"
 include: "rules/env_tree_placement.smk"
 include: "rules/annotate_tree.smk"
 

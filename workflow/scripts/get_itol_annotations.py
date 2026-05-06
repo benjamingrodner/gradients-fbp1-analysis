@@ -101,7 +101,7 @@ def main():
 
     bn = os.path.basename(args.tree)
     
-    for col in ["Taxon", "Gene", "Domain"]:
+    for col in ["Taxon", "Gene", "Domain","Substrate"]:
         if col in df.columns:
             # Mapping Sequence_ID -> Column Value
             leaf_map = dict(zip(df["Sequence_ID"].astype(str), df[col].astype(str)))

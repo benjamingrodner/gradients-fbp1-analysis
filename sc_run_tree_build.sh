@@ -22,7 +22,7 @@ snakemake \
     --printshellcmds \
     --rerun-incomplete \
     --rerun-triggers mtime \
-    -R filter_env_alignment_very_short_long  
+    -R get_itol_annotations 
     # --resources cores=16 \
     # --executor slurm \
     # --default-resources \

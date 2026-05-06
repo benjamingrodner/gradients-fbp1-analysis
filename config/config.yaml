@@ -4,7 +4,8 @@
 # (isolates sequence files should be the only files in that dir)
 dirs_data: 
   metatranscriptomes: /scratch/bgrodner/metaT_data/old_pipeline_chris_parquets
-  isolates: data/shiri_isolates
+  isolates: data/isolates
+  experiments: data/experiments
 
 # Path for marferret-marmicrodb database download
 path_database: /mnt/nfs/projects/marferret/marmicrodb/MMDB_2024_04_14/MarFERReT.v1.1.1.MARMICRODB.2024_04_14.combined.faa.gz
@@ -28,9 +29,11 @@ batches:
   - G3NS
   - G3PA.UW
 
+# Experiment info table
+fn_experiment_info: resources/experiments_info.yaml
+
 # Paths to hmmprofiles and associated gene names
 fn_gene_info: resources/ko_info_table_type3_sbp.csv
-
 
 dict_gene_hmmprofile:
   fbp1: resources/fbp1.hmm
@@ -153,6 +156,14 @@ group_env_stuff:
 
 cluster_env_hitseqs:
   min_seq_id: "0.90" # In quotes for better filenaming
+  coverage: "0.50" # In quotes for better filenaming
+  cov_mode: 1
+  threads: 1
+  mem_mb: 2000
+  runtime: 60
+
+cluster_exp_hitseqs:
+  min_seq_id: "0.95" # In quotes for better filenaming
   coverage: "0.50" # In quotes for better filenaming
   cov_mode: 1
   threads: 1
