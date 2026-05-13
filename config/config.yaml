@@ -49,6 +49,9 @@ ttaxnames:
 target_genes_for_env_placement:
   - fbp1
 
+target_genes_for_exp_placement:
+  - fbp1
+
 # Location to put known crystal structure sequences 
 # (should contain only the ones you want to include in the tree building)
 dir_rcsb: resources/rcsb_downloads
@@ -163,6 +166,26 @@ build_tree:
   model: PROTGAMMALGF
   n_bootstraps: autoMRE_IGN  # For automatic number of bootstraps use autoMR/autoMRE/autoMRE_IGN
 
+get_bioproject_reads:
+  threads: 8
+  mem_mb: 10000
+  runtime: 240
+
+trim: 
+  threads: 4
+
+salmon:
+  threads: 8
+  mem_mb: 10000
+  runtime: 240
+  index:
+    threads: 16
+    mem_mb: 100000
+    runtime: 600
+
+
+
+# Color palletes 
 dict_cstrip_val_color: {
   'Substrate':{ # Dark2
       'Hydroxamate siderophore':'#e7298a',
@@ -194,6 +217,7 @@ dict_cstrip_val_color: {
       'Database':'#ffffff',
       'Crystal structure':'#ffffff',
       'Environmental isolate':'#b4b4b4',
+      'Experiment':'#b4b4b4',
   },
   'Gene':{
       'fbp1':'#000000',

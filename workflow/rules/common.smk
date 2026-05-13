@@ -1,33 +1,160 @@
+from pathlib import Path
 import glob
+import yaml
 import re
 
-def get_fn_exp_assembly(exp):
+def expand_exp_quant(fmt):
+    fns = []
+    for exp, dinfo in DICT_EXP.items():
+        m = dinfo['method_counts']
+        if (m == 'salmon-biosamples') | (m == 'salmon-bioproject'):
+            fns.append(fmt.format(exp_quant=exp))
+    return fns
+
+
+def get_dirs_biosample_fastq(wildcards):
+    fns = []
+    for exp, dinfo in DICT_EXP.items():
+        m = dinfo['method_counts']
+        if (m == 'salmon-biosamples') | (m == 'salmon-bioproject'):
+            fns.append(dir_biosamples_fastq_merged.format(exp_quant=exp))
+    return fns
+
+def aggregate_salmon_counts_done(wildcards):
+    fns = []
+    for exp, dinfo in DICT_EXP.items():
+        m = dinfo['method_counts']
+        if (m == 'salmon-biosamples') | (m == 'salmon-bioproject'):
+            fns.append(fmt_exp_salmon_quant_done.format(exp_quant=exp))
+    return fns
+
+
+def aggregate_exp_salmon_counts(wildcards):
+    return expand_biosamples(wildcards, fmt_quant, get_reads=False)
+
+def aggregate_fastqc_trimmed(wildcards):
+    return expand_biosamples(wildcards, fmt_fastqc_trimmed)
+
+def aggregate_fastqc_raw(wildcards):
+    return expand_biosamples(wildcards, fmt_fastqc_raw)
+
+def expand_biosamples(wildcards, fmt, get_reads=True):
+    _ = checkpoints.gzip_biosample_fastqs.get(**wildcards)
+    d = checkpoints.merge_biosample_fastqs.get(
+        exp_quant=wildcards.exp_quant
+    ).output[0]
+    fns_d = glob.glob(f'{d}/*')
+    regex = fmt_biosample_fastq_merged.format(
+        exp_quant=exp, sample="(?P<sample>SAMN\d+)", read="(?P<read>\w+)"
+    )
+    fns = []
+    for fn in fns_d:
+        match = re.search(regex, fn)
+        try:
+            sample = match.group('sample')
+        except:
+            raise ValueError(f"Could not match sample with regex\n{regex}\non file\n{fn}")
+        read = ""
+        if get_reads:
+            try:
+                read = match.group('read')
+            except:
+                raise ValueError(f"Could not match read with regex\n{regex}\non file\n{fn}")
+        fn = fmt.format(exp_quant=exp, sample=sample, read=read)     
+        fns.append(fn)
+    return fns
+
+
+def get_adapter_file(exp):
+    fn = DICT_EXP[exp].get('adapter_file')
+    if fn is None:
+        fn = ""
+    return fn
+
+def get_srr_info(exp):
+    m = DICT_EXP[exp]['method_counts']
+    if m == 'salmon-biosamples':
+        return fmt_biosample_srr_info.format(exp_biosample=exp)
+    elif m == 'salmon-bioproject':
+        return fmt_bioproject_srr_info.format(exp_bioproject=exp)
+    else:
+        raise ValueError(f"Experiment {exp} is not defined for quantification with method {m}")
+        
+
+def get_dir_fastq(exp):
+    m = DICT_EXP[exp]['method_counts']
+    if m == 'salmon-biosamples':
+        return dir_biosample_fastq.format(exp_biosample=exp)
+    elif m == 'salmon-bioproject':
+        return dir_bioproject_fastq.format(exp_bioproject=exp)
+    else:
+        raise ValueError(f"Experiment {exp} is not defined for salmon quant with method {m}")
+    
+
+def get_fns_downloads_done(wildcards):
+    fns = []
+    for exp, dinfo in DICT_EXP.items():
+        m = dinfo['method_counts']
+        if m == 'salmon-biosamples':
+            fn = fmt_biosample_fastq_done.format(exp_biosample=exp)
+        elif m == 'salmon-bioproject':
+            fn = fmt_bioproject_fastq_done.format(exp_bioproject=exp)
+        elif m == 'download':
+            fn = fmt_download_counts_done.format(exp_download_counts=exp)
+        elif 'from_author' in m:
+            pass
+        else:
+            raise ValueError(f"Method {m} is not available for getting the experiment counts")
+        fns.append(fn)
+    return fns
+
+
+def get_elink_target(exp):
+    elink = DICT_EXP[exp].get('elink_target')
+    if elink is None:
+        elink = 'biosample'
+    return elink
+
+def get_exp_assm_fn_or_link(exp):
     method = DICT_EXP[exp]['method_assembly']
     if method == 'download':
-        d = dir_exp_download_assembly.format(exp_download_assembly=exp)
-        return glob.glob(f'{d}/*')[0]  # can only have one file for assembly
+        return DICT_EXP[exp]['link_assembly']
     elif method == 'from_author':
         return DICT_EXP[exp]['fn_assembly']
     else:
         raise ValueError(f"Method {method} is not available for getting the experiment assembly")
 
-def get_dirs_download_assembly(wildcards):
-    dirs = []
-    for exp, dict_info in DICT_EXP.values():
-        if dict_info['method_assembly'] == 'download':
-            d = dir_exp_download_assembly.format(exp_download_assembly=exp)
-            # fn = glob.glob(f'{d}/*')[0]  # can only have one file for assembly
-            dirs.append(d)
-    return dirs
-
-def get_elink_target(exp):
-    alt = DICT_EXP[exp].get('elink_target')
-    return 'biosample' if alt is None else alt
+def get_exp_rep_seqs(wildcards):
+    fns = []
+    for exp in DICT_EXP.keys():
+        d = checkpoints.group_exp_hitnames.get(
+            exp=exp
+        ).output[0]
+        for f in os.listdir(d):
+            if f.startswith(best_hit_prefix):
+                gene = f.replace(best_hit_prefix, "").replace(best_hit_ext,"")
+                fn = fmt_exp_rep_seqs.format(exp=exp, gene=gene)
+                fns.append(fn)
+    return fns
 
 def get_env_rep_seqs(wildcards):
     return glob.glob(
             fmt_clustered_env_hitseqs.format(taxgene='*')
         )
+
+def get_target_exp_rep_seqs(wildcards):
+    fns = []
+    for exp in DICT_EXP.keys():
+        d = checkpoints.group_exp_hitnames.get(
+            exp=exp
+        ).output[0]
+        for f in os.listdir(d):
+            if f.startswith(best_hit_prefix):
+                gene = f.replace(best_hit_prefix, "").replace(best_hit_ext,"")
+                if gene in config['target_genes_for_exp_placement']:
+                    fn = fmt_exp_rep_seqs.format(exp=exp, gene=gene)
+                    fns.append(fn)
+    return fns
 
 def get_target_env_rep_seqs(wildcards):
     fns = glob.glob(
@@ -68,12 +195,13 @@ def aggregate_env_clusters(wildcards):
         for cid in chunk_ids
     ]
     return out
-
 # Global 
 GENES = list(config['dict_gene_hmmprofile'].keys())
 BATCHES = list(config['batches'])
 with open(config['fn_experiment_info'], 'r') as f:
     DICT_EXP = yaml.safe_load(f)
+
+READS=['1','2']
 
 # Data format
 fmt_seqs_parquet = (
@@ -102,7 +230,6 @@ fn_hmm_hitnames_all = (
     + '_all.names'
 )
 fn_hmms_best_hit = dir_hmmsearch + f'/{bn_hmm_genes}_hmms_best_hit.tsv'
-
 
 # Cluster db
 dir_clust_db = config['dir_out'] + '/cluster/db'
@@ -154,13 +281,49 @@ fn_env_seqs_clust_cat = (
     f'{dir_env_clust}/{bn_env_clust}/{bn_hmm_genes}_env_seqs_clust_cat.faa'
 )
 
+# Hmmsearch experiments
+dir_exp_data = config['dirs_data']['experiments']
+fmt_exp_assembly = dir_exp_data + '/{exp}/assembly.fasta'
+fmt_exp_assembly_6tr = dir_exp_data + '/{exp}/assembly.faa'
+fmt_exp_assembly_6tr_rename = dir_exp_data + '/{exp}/assembly_exp_prefix.faa'
+# fn_download_assemblies_done = dir_exp_data + '/fns_downloaded.txt'
+dir_exp = config['dir_out'] + '/experiments'
+dir_exp_hmm = dir_exp + '/{exp}/hmmsearch'
+bn_hmm_exp_gene = (
+    dir_exp_hmm + '/{gene}/hmmsearch_T' 
+    + str(config['hmmsearch']['thresh_score'])
+)
+fmt_table_hmm_exp = bn_hmm_exp_gene + '.tbl'
+fmt_table_hmm_domain_exp = bn_hmm_exp_gene + '.domtab'
+fmt_stdout_hmm_exp = bn_hmm_exp_gene + '.out'
+fmt_hmm_hitnames_exp = bn_hmm_exp_gene + '.hitnames'
+fn_hmm_hitnames_exp_all = dir_exp_hmm + '/headers_merged.txt'
+fmt_hmms_best_hit_exp = dir_exp_hmm + '/best_hit_genes.tsv'
+dir_exp_hitnames_grouped_gene = dir_exp_hmm + '/best_hit_genes_grouped'
+best_hit_prefix = 'hitnames_best_hit_'
+best_hit_ext = '.txt'
+fmt_exp_hitnames_grouped_gene = (
+    dir_exp_hitnames_grouped_gene + '/' + best_hit_prefix + '{gene}' + best_hit_ext
+)
+
+# Cluster experiments
+ident = re.sub('0.','',str(config['cluster_exp_hitseqs']['min_seq_id']))
+cov = re.sub('0.','',str(config['cluster_exp_hitseqs']['coverage']))
+mode = config['cluster_exp_hitseqs']['cov_mode']
+bn_exp_clust = f'mmseqs2_i{ident}_c{cov}_mode{mode}'
+dir_exp_clust = dir_exp + '/{exp}/cluster/' + bn_exp_clust + '/{gene}'
+fmt_exp_seqs_to_cluster = f'{dir_exp_clust}/seqs_to_cluster.fasta'
+fmt_exp_rep_seqs = f'{dir_exp_clust}/exp_clust_rep_seq.fasta'
+fmt_exp_clusters = f'{dir_exp_clust}/exp_clust_cluster.tsv'
+
+
 # Alignment
 dir_aln = (
     config['dir_out'] 
     + f'/alignment/genes_{bn_hmm_genes}-db_{bn_clust_sub}-env_{bn_env_clust}'
     )
 fmt_crystal_seqs = config['dir_rcsb'] + '/{rcsb_id}.fasta'
-fn_db_crystal_seqs = dir_aln + '/db-env-crystal-manual.fasta'
+fn_db_crystal_seqs = dir_aln + '/db-env-exp-crystal-manual.fasta'
 fn_alignment = re.sub('.fasta','.aln',fn_db_crystal_seqs)
 fn_trim_crystal = fn_alignment + '.trim_crystal'
 fn_trim_crystal_startend = fn_alignment + '.trim_crystal_startend'
@@ -211,6 +374,22 @@ fn_place_env_tree = (
     f'{dir_env_tree}/RAxML_labelledTree.{bn_env_tree}'
 )
 
+# Experiment tree placement
+bn_exp_target = ''
+for gene in config['target_genes_for_exp_placement']:
+    bn_exp_target += gene + '_'
+bn_exp_target = bn_exp_target.rstrip('_')
+dir_exp_tree = f'{dir_tree}/exp_placement/{bn_exp_clust}/{bn_exp_target}'
+bn_exp_tree = f'exp_{bn_exp_target}-db_{bn_hmm_genes}-crystal-manual'
+fn_exp_aligned_mask_dedup_tfilt = f'{dir_exp_tree}/{bn_exp_tree}_masked.dedup.target_gene_filt'
+fn_exp_aligned_mask_dedup_tfilt_filt = f'{fn_exp_aligned_mask_dedup_tfilt}.short_long_filt'
+fn_place_exp_tree_done = (
+    f'{dir_exp_tree}/tree_done.{bn_exp_tree}'
+)
+fn_place_exp_tree = (
+    f'{dir_exp_tree}/RAxML_labelledTree.{bn_exp_tree}'
+)
+
 # Tree annotation
 dir_annot = f'{dir_env_tree}/annotation'
 fn_table_annotate_env = f'{dir_annot}/annotations_env.csv'
@@ -225,33 +404,59 @@ fn_source_treecolors = f'{dir_annot}/Source_treecolors.txt'
 fn_fbp1_colorstrip = f'{dir_annot}/Gene_colorstrip.txt'
 # fn_crystal_symbol = f'{dir_annot}/crystal_symbol.txt'
 
-# Hmmsearch isolates
-dir_exp = config['dirs_data']['experiments']
-dir_exp_download_assembly = dir_exp + '/{exp_download_assembly}/assembly'
-fn_download_assemblies_done = dir_download_assembly + "/done.txt"
-bn_hmm_exp = (
-    dir_exp + '/{exp}/hmmsearch/{gene}'
-    + '/hmmsearch_T' + str(config['hmmsearch']['thresh_score'])
-)
-fmt_table_hmm_exp = bn_hmm_exp + '.tbl'
-fmt_table_hmm_domain_exp = bn_hmm_exp + '.domtab'
-fmt_stdout_hmm_exp = bn_hmm_exp + '.out'
-fmt_hmm_hitnames_exp = bn_hmm_exp + '.hitnames'
-fn_hmm_hitnames_exp_all = dir_exp + '/{exp}/hmmsearch/hmmsearch_headers_merged.txt'
-fmt_hmms_best_hit_exp = dir_exp + '/{exp}/hmmsearch/hmmsearch_best_hit.tsv'
-fmt_hmms_best_hit_exp = dir_exp + '/{exp}/hmmsearch/hmmsearch_best_hit.tsv'
-fmt_exp_hitnames_grouped_gene = dir_exp + '/{exp}/hmmsearch/{gene}/hitnames_best_hit.txt'
+# Experiment tree annotation
+dir_annot_exp = f'{dir_exp_tree}/annotation'
+fn_table_annotate_exp = f'{dir_annot_exp}/annotations_exp.csv' 
+fn_taxon_colorstrip_exp = f'{dir_annot_exp}/Taxon_colorstrip.txt'
+fn_domain_colorstrip_exp = f'{dir_annot_exp}/Domain_colorstrip.txt'
+fn_substrate_treecolors_exp = f'{dir_annot_exp}/Substrate_treecolors.txt'
+fn_source_treecolors_exp = f'{dir_annot_exp}/Source_treecolors.txt'
+fn_fbp1_colorstrip_exp = f'{dir_annot_exp}/Gene_colorstrip.txt'
 
-# Cluster isolates
-ident = re.sub('0.','',str(config['cluster_exp_hitseqs']['min_seq_id']))
-cov = re.sub('0.','',str(config['cluster_exp_hitseqs']['coverage']))
-mode = config['cluster_exp_hitseqs']['cov_mode']
-bn_exp_clust = f'mmseqs2_i{ident}_c{cov}_mode{mode}'
-dir_exp_clust = dir_exp + '/{exp}/cluster/' + bn_exp_clust + '/{gene}'
-fmt_exp_seqs_to_cluster = f'{dir_exp_clust}/seqs_to_cluster.fasta'
-fmt_exp_rep_seqs = f'{dir_exp_clust}/exp_clust_rep_seq.fasta'
-fmt_exp_clusters = f'{dir_exp_clust}/exp_clust_cluster.tsv'
 
-# isolate experiment counts
-fmt_bioproject_info = dir_exp + '/{iso_bioproject}/bioproject_info.txt'
-dir_fastq = dir_exp + '/{iso_bioproject}/reads'
+# experiment downloads
+dir_download_counts = dir_exp_data + '{exp_download_counts}/counts_download'
+fmt_download_counts_done = f'{dir_download_counts}/download_counts_done.txt'
+
+dir_exp_data_bpj = dir_exp_data + '/{exp_bioproject}/bioproject'
+fmt_bioproject_info = f'{dir_exp_data_bpj}/biosample_info.txt'
+fmt_bioproject_srr_info = f'{dir_exp_data_bpj}/srr_info.txt'
+fmt_bioproject_srr_list = f'{dir_exp_data_bpj}/srr_list.txt'
+dir_bioproject_fastq = f'{dir_exp_data_bpj}/reads'
+fmt_bioproject_fastq_done = f'{dir_exp_data_bpj}/download_done.txt'
+
+dir_exp_data_bs = dir_exp_data + '/{exp_biosample}/biosamples'
+fmt_biosample_info = f'{dir_exp_data_bs}/biosample_info.txt'
+fmt_biosample_srr_info = f'{dir_exp_data_bs}/srr_info.txt'
+fmt_biosample_srr_list = f'{dir_exp_data_bs}/srr_list.txt'
+dir_biosample_fastq = f'{dir_exp_data_bs}/reads'
+fmt_biosample_fastq_done = f'{dir_exp_data_bs}/download_done.txt'
+
+fn_merge_downloads_done = f'{dir_exp_data}/download_reads_counts_done.txt'
+
+# Experiment read prep
+dir_read_prep = dir_exp + '/{exp_quant}/read_prep'
+dir_biosamples_fastq_merged = f'{dir_read_prep}/merge_biosample'
+fmt_biosample_fastq_merged_r1 = dir_biosamples_fastq_merged + '/{sample}_1.fastq.gz'
+fmt_biosample_fastq_merged_r2 = dir_biosamples_fastq_merged + '/{sample}_2.fastq.gz'
+fmt_biosample_fastq_merged = dir_biosamples_fastq_merged + '/{sample}_{read}.fastq.gz'
+fn_agg_biosample_dirs = f'{dir_exp}/biosample_merge_done.txt'
+dir_trimmed = f'{dir_read_prep}/trimmed'
+fmt_fastq_trim_r1 = dir_trimmed + '/{sample}_1.fastq.gz'
+fmt_fastq_trim_r1_unpaired = dir_trimmed + '/{sample}_1_unpaired.fastq.gz'
+fmt_fastq_trim_r2 = dir_trimmed + '/{sample}_2.fastq.gz'
+fmt_fastq_trim_r2_unpaired = dir_trimmed + '/{sample}_2_unpaired.fastq.gz'
+fmt_fastq_trim = dir_trimmed + '/{sample}_{read}.fastq.gz'
+dir_fastqc =  f'{dir_read_prep}/fastqc'
+fmt_fastqc_raw = dir_fastqc + '/raw/{sample}_{read}_fastqc.html'
+fmt_fastqc_trimmed = dir_fastqc + '/trimmed/{sample}_{read}_fastqc.html'
+fmt_multiqc_raw = f'{dir_read_prep}/multiqc/raw/multiqc_report.html'
+fmt_multiqc_trimmed = f'{dir_read_prep}/multiqc/trimmed/multiqc_report.html'
+
+# Experiment quant
+fmt_exp_assembly_quant = dir_exp_data + '/{exp_quant}/assembly.fasta'
+dir_quant = dir_exp + '/{exp_quant}/sample_quant'
+dir_salmon_idx = f'{dir_quant}/salmon_index'
+fmt_quant = dir_quant + '/{sample}/quant.sf.gz'
+fmt_exp_salmon_quant_done = f'{dir_quant}/salmon_quant_done.txt'
+fn_salmon_quant_done = f'{dir_exp}/salmon_quant_done.txt'

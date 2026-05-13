@@ -41,17 +41,14 @@ rule merge_clusters_with_crystal_struct_seqs:
     input:
         fn_db_rep_seqs_sub,
         get_env_rep_seqs,
-        expand(fmt_exp_rep_seqs, exp=DICT_EXP.keys(), gene=GENES),
+        get_exp_rep_seqs,
         expand(fmt_crystal_seqs, rcsb_id=config['rcsb_ids']),
         glob.glob(config['dir_ref_man'] + '/*'),
     output: 
         fn_db_crystal_seqs,
     shell:
         """
-        cat {input.fn_db_rep_seqs_sub:q} > {output:q}
-        cat {input.fns_env_rep_seqs:q} >> {output:q}
-        cat {input.fns_crystal_seqs:q} >> {output:q}
-        cat {input.fns_manual_ref:q} >> {output:q}
+        cat {input:q} > {output:q}
         """ 
 
 

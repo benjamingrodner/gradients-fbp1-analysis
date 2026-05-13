@@ -1,29 +1,88 @@
-rule download_exp_assembly:
+rule get_exp_assemblies:
     output:
-        directory(dir_exp_download_assembly),
+        fmt_exp_assembly,
+    log:
+        "logs/get_exp_assemblies/{exp}.log"
     conda:
         "../envs/sra_tools.yaml"
     params:
-        link = lambda w: DICT_EXP[w.exp_download_assembly]['link_assembly']
+        method = lambda w: DICT_EXP[w.exp]['method_assembly'],
+        fn_link = lambda w: get_exp_assm_fn_or_link(w.exp),
     shell:
         """
-        wget -P {output:q} {params.link:q}
+        TMP={output:q}.tmp
+        if [[ {params.method} == 'download' ]]; then
+            echo "Downloading {params.fn_link}..." 2> {log:q}
+            wget -O "$TMP" {params.fn_link:q} 2>> {log:q}
+        elif [[ {params.method} == 'from_author' ]]; then
+            echo "Copying {params.fn_link}..." 2> {log:q}
+            cp {params.fn_link} "$TMP" 2>> {log:q}
+        else
+            echo "Error: method {params.method} is not defined"  2> {log:q}
+            exit 1
+        fi
+        
+        if file "$TMP" | grep -q 'gzip compressed data'; then
+            echo "File is gzipped. Decompressing now..." 2>> {log:q}
+            gunzip -c "$TMP" > {output:q} 2>> {log:q}
+            rm "$TMP" 2>> {log:q}
+        else
+            echo "File is already unzipped. Renaming..." 2>> {log:q}
+            mv "$TMP" {output:q} 2>> {log:q}
+        fi
         """
 
-rule merge_exp_download_assembly_dirnames:
+rule translate_exp_assemblies:
     input:
-        get_dirs_download_assembly,
+        fmt_exp_assembly,
     output:
-        fn_download_assemblies_done,
+        fmt_exp_assembly_6tr,
+    log:
+        "logs/translate_exp_assemblies/{exp}.log"
+    conda:
+        "../envs/seqkit.yaml"
     shell:
         """
-        echo {input:q} > {output:q}
+        SEQTYPE=$(seqkit stats {input:q} \
+            | awk 'NR==2 {{print $3}}')
+        if [[ "$SEQTYPE" == DNA || "$SEQTYPE" == RNA ]]; then
+            transeq -auto -sformat pearson -frame 6 \
+                -sequence {input:q} \
+                -outseq {output:q} \
+                2> {log:q}
+        elif [[ "$SEQTYPE" == Protein ]]; then
+            cp {input:q} {output:q} \
+                2> {log:q}
+        else
+            echo "Error: seqtype ${{SEQTYPE}} is unknown"  \
+                2> {log:q}
+            exit 1
+        fi
         """
+
+rule rename_exp_assemblies:
+    input:
+        fmt_exp_assembly_6tr,
+    output:
+        fmt_exp_assembly_6tr_rename,
+    log:
+        "logs/translate_exp_assemblies/{exp}.log"
+    conda:
+        "../envs/seqkit.yaml"
+    params:
+        prefix = lambda w: DICT_EXP[w.exp]['prefix']
+    shell:
+        """
+        seqkit replace -p "^" -r "{params.prefix}_" \
+            {input:q} > {output:q}
+        """
+
+
 
 rule hmmsearch_exp:
     input:
-        fn_seqs = lambda w: get_fn_exp_assembly(w.exp),
         fn_hmm = lambda w: config['dict_gene_hmmprofile'][w.gene],
+        fn_seqs = fmt_exp_assembly_6tr_rename,
     output:
         fn_table_hmm = fmt_table_hmm_exp,
         fn_table_hmm_domain = fmt_table_hmm_domain_exp,
@@ -44,7 +103,6 @@ rule hmmsearch_exp:
             --domtblout {output.fn_table_hmm_domain:q} \
             -o {output.fn_stdout_hmm:q} \
             -T {params.thresh_score} \
-            --cpu {threads} \
             {input.fn_hmm:q} \
             {input.fn_seqs:q} \
             2> {log:q}
@@ -59,7 +117,7 @@ rule hmmsearch_exp:
 
 rule merge_hmmsearch_hitnames_exp:
     input:
-        expand(fmt_hmm_hitnames_exp, gene=GENES)
+        [fmt_hmm_hitnames_exp.format(exp='{exp}', gene=gene) for gene in GENES]
     output:
         fn_hmm_hitnames_exp_all
     shell:
@@ -68,11 +126,11 @@ rule merge_hmmsearch_hitnames_exp:
 
 rule get_hmms_best_hit_exp:
     input:
-        expand(fmt_table_hmm_exp, gene=GENES)
+        [fmt_table_hmm_exp.format(exp='{exp}', gene=gene) for gene in GENES]
     output:
         fmt_hmms_best_hit_exp,
     log:
-        "logs/get_hmms_best_hit_exp.log"
+        "logs/get_hmms_best_hit_exp/{exp}.log"
     params: 
         script=config['dir_scripts'] + "/get_hmms_best_hit.py",
     shell:
@@ -83,23 +141,4 @@ rule get_hmms_best_hit_exp:
             2> {log:q}
         """
     
-rule group_exp_hitnames:
-    input:
-        fmt_hmms_best_hit_exp,
-    output:
-        expand(fmt_exp_hitnames_grouped_gene),
-    log:
-        "logs/group_exp_hitnames.log"
-    params:
-        script = config['dir_scripts'] + "/group_exp_hitnames.py",
-        fmt_out = lambda w: fmt_exp_hitnames_grouped_gene.format(
-            exp=w.exp, gene='{gene}'
-        ),
-        fn_config = config['fn_config'],
-    shell:
-        """
-        python {params.script:q} \
-            {input:q} {params.fn_config:q} {params.fmt_out:q} \
-            2> {log:q}
-        """
     

@@ -5,3 +5,4 @@ dependencies:
   - bioconda::sra-tools=3.4.1
   - bioconda::entrez-direct=25.3
   - conda-forge::wget=1.20.3
+  - conda-forge::pigz=2.8

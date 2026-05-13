@@ -12,8 +12,17 @@ include: "rules/build_tree.smk"
 include: "rules/cluster_env.smk"
 include: "rules/cluster_exp.smk"
 include: "rules/env_tree_placement.smk"
+include: "rules/exp_tree_placement.smk"
 include: "rules/annotate_tree.smk"
+include: "rules/experiment_downloads.smk"
+include: "rules/experiment_read_prep.smk"
+include: "rules/experiment_quant.smk"
 
 rule all:
     input:
-        fn_fbp1_colorstrip,
+        fn_salmon_quant_done,
+        fn_agg_biosample_dirs,
+        # fn_place_exp_tree_done,
+        # fn_place_env_tree_done,
+        # fn_fbp1_colorstrip,
+        # fn_fbp1_colorstrip_exp,
