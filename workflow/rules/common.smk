@@ -3,31 +3,33 @@ import glob
 import yaml
 import re
 
+def get_script_merge_counts_auth(exp):
+    fn = DICT_EXP[exp].get('script_merge_counts')
+    if fn is None:
+        fn = "workflow/scripts/cp_counts_author_to_parquet.py"
+    return fn
+
+def get_glob_counts_auth(exp):
+    fn = DICT_EXP[exp].get('glob_counts')
+    if fn is None:
+        d = dir_download_counts.format(exp_download_counts=exp)
+        fn = f'{d}/*'
+    return fn
+
 def expand_exp_quant(fmt):
     fns = []
     for exp, dinfo in DICT_EXP.items():
         m = dinfo['method_counts']
-        if (m == 'salmon-biosamples') | (m == 'salmon-bioproject'):
+        if 'salmon' in m:
             fns.append(fmt.format(exp_quant=exp))
     return fns
-
-
-def get_dirs_biosample_fastq(wildcards):
+def expand_exp_auth(fmt):
     fns = []
     for exp, dinfo in DICT_EXP.items():
         m = dinfo['method_counts']
-        if (m == 'salmon-biosamples') | (m == 'salmon-bioproject'):
-            fns.append(dir_biosamples_fastq_merged.format(exp_quant=exp))
+        if m in ['from_author','download']:
+            fns.append(fmt.format(exp_auth=exp))
     return fns
-
-def aggregate_salmon_counts_done(wildcards):
-    fns = []
-    for exp, dinfo in DICT_EXP.items():
-        m = dinfo['method_counts']
-        if (m == 'salmon-biosamples') | (m == 'salmon-bioproject'):
-            fns.append(fmt_exp_salmon_quant_done.format(exp_quant=exp))
-    return fns
-
 
 def aggregate_exp_salmon_counts(wildcards):
     return expand_biosamples(wildcards, fmt_quant, get_reads=False)
@@ -39,13 +41,12 @@ def aggregate_fastqc_raw(wildcards):
     return expand_biosamples(wildcards, fmt_fastqc_raw)
 
 def expand_biosamples(wildcards, fmt, get_reads=True):
-    _ = checkpoints.gzip_biosample_fastqs.get(**wildcards)
-    d = checkpoints.merge_biosample_fastqs.get(
-        exp_quant=wildcards.exp_quant
-    ).output[0]
+    exp = wildcards.exp_quant
+    # _ = checkpoints.gzip_biosample_fastqs.get(**wildcards)
+    d = checkpoints.merge_biosample_fastqs.get(exp_quant=exp).output[0]
     fns_d = glob.glob(f'{d}/*')
     regex = fmt_biosample_fastq_merged.format(
-        exp_quant=exp, sample="(?P<sample>SAMN\d+)", read="(?P<read>\w+)"
+        exp_quant=exp, sample="(?P<sample>\w+)", read="(?P<read>\w+)"
     )
     fns = []
     for fn in fns_d:
@@ -60,16 +61,30 @@ def expand_biosamples(wildcards, fmt, get_reads=True):
                 read = match.group('read')
             except:
                 raise ValueError(f"Could not match read with regex\n{regex}\non file\n{fn}")
-        fn = fmt.format(exp_quant=exp, sample=sample, read=read)     
-        fns.append(fn)
-    return fns
+        fn_ = fmt.format(exp_quant=exp, sample=sample, read=read)     
+        fns.append(fn_)
+    return list(set(fns))
 
 
 def get_adapter_file(exp):
     fn = DICT_EXP[exp].get('adapter_file')
     if fn is None:
-        fn = ""
+        fn = "None"
     return fn
+
+def get_trim_opts(exp):
+    try:
+        fn = DICT_EXP[exp].get('trimmomatic_opts')
+    except: 
+        raise ValueError(f"trimmomatic_opts is not defined for experiment {exp}")
+    return fn
+
+def check_merge_biosample(exp):
+    m = DICT_EXP[exp]['method_counts']
+    merge = "yes"
+    if m == 'salmon-srr':
+        merge = "no"
+    return merge
 
 def get_srr_info(exp):
     m = DICT_EXP[exp]['method_counts']
@@ -77,6 +92,8 @@ def get_srr_info(exp):
         return fmt_biosample_srr_info.format(exp_biosample=exp)
     elif m == 'salmon-bioproject':
         return fmt_bioproject_srr_info.format(exp_bioproject=exp)
+    elif m == 'salmon-srr':
+        return fmt_srr_info.format(exp_srr=exp)
     else:
         raise ValueError(f"Experiment {exp} is not defined for quantification with method {m}")
         
@@ -87,6 +104,8 @@ def get_dir_fastq(exp):
         return dir_biosample_fastq.format(exp_biosample=exp)
     elif m == 'salmon-bioproject':
         return dir_bioproject_fastq.format(exp_bioproject=exp)
+    elif m == 'salmon-srr':
+        return dir_srr_fastq.format(exp_srr=exp)
     else:
         raise ValueError(f"Experiment {exp} is not defined for salmon quant with method {m}")
     
@@ -99,10 +118,12 @@ def get_fns_downloads_done(wildcards):
             fn = fmt_biosample_fastq_done.format(exp_biosample=exp)
         elif m == 'salmon-bioproject':
             fn = fmt_bioproject_fastq_done.format(exp_bioproject=exp)
+        elif m == 'salmon-srr':
+            fn = fmt_srr_fastq_done.format(exp_srr=exp)
         elif m == 'download':
             fn = fmt_download_counts_done.format(exp_download_counts=exp)
         elif 'from_author' in m:
-            pass
+            continue
         else:
             raise ValueError(f"Method {m} is not available for getting the experiment counts")
         fns.append(fn)
@@ -202,7 +223,6 @@ with open(config['fn_experiment_info'], 'r') as f:
     DICT_EXP = yaml.safe_load(f)
 
 READS=['1','2']
-
 # Data format
 fmt_seqs_parquet = (
     config['dirs_data']['metatranscriptomes'] 
@@ -281,12 +301,14 @@ fn_env_seqs_clust_cat = (
     f'{dir_env_clust}/{bn_env_clust}/{bn_hmm_genes}_env_seqs_clust_cat.faa'
 )
 
-# Hmmsearch experiments
+# Experiment downloads
 dir_exp_data = config['dirs_data']['experiments']
 fmt_exp_assembly = dir_exp_data + '/{exp}/assembly.fasta'
 fmt_exp_assembly_6tr = dir_exp_data + '/{exp}/assembly.faa'
 fmt_exp_assembly_6tr_rename = dir_exp_data + '/{exp}/assembly_exp_prefix.faa'
 # fn_download_assemblies_done = dir_exp_data + '/fns_downloaded.txt'
+
+# Hmmsearch experiments
 dir_exp = config['dir_out'] + '/experiments'
 dir_exp_hmm = dir_exp + '/{exp}/hmmsearch'
 bn_hmm_exp_gene = (
@@ -415,8 +437,8 @@ fn_fbp1_colorstrip_exp = f'{dir_annot_exp}/Gene_colorstrip.txt'
 
 
 # experiment downloads
-dir_download_counts = dir_exp_data + '{exp_download_counts}/counts_download'
-fmt_download_counts_done = f'{dir_download_counts}/download_counts_done.txt'
+dir_download_counts = dir_exp_data + '/{exp_download_counts}/counts_download'
+fmt_download_counts_done = dir_exp_data + '/{exp_download_counts}/download_counts_done.txt'
 
 dir_exp_data_bpj = dir_exp_data + '/{exp_bioproject}/bioproject'
 fmt_bioproject_info = f'{dir_exp_data_bpj}/biosample_info.txt'
@@ -432,7 +454,14 @@ fmt_biosample_srr_list = f'{dir_exp_data_bs}/srr_list.txt'
 dir_biosample_fastq = f'{dir_exp_data_bs}/reads'
 fmt_biosample_fastq_done = f'{dir_exp_data_bs}/download_done.txt'
 
-fn_merge_downloads_done = f'{dir_exp_data}/download_reads_counts_done.txt'
+dir_exp_data_srr = dir_exp_data + '/{exp_srr}/srrs'
+fmt_srr_info = f'{dir_exp_data_srr}/srr_info.txt'
+fmt_srr_list = f'{dir_exp_data_srr}/srr_list.txt'
+dir_srr_prefetch = f'{dir_exp_data_srr}/prefetch_reads'
+dir_srr_fastq = f'{dir_exp_data_srr}/reads'
+fmt_srr_fastq_done = f'{dir_exp_data_srr}/download_done.txt'
+
+fn_read_and_count_downloads_done = f'{dir_exp_data}/download_reads_and_counts_done.txt'
 
 # Experiment read prep
 dir_read_prep = dir_exp + '/{exp_quant}/read_prep'
@@ -440,23 +469,39 @@ dir_biosamples_fastq_merged = f'{dir_read_prep}/merge_biosample'
 fmt_biosample_fastq_merged_r1 = dir_biosamples_fastq_merged + '/{sample}_1.fastq.gz'
 fmt_biosample_fastq_merged_r2 = dir_biosamples_fastq_merged + '/{sample}_2.fastq.gz'
 fmt_biosample_fastq_merged = dir_biosamples_fastq_merged + '/{sample}_{read}.fastq.gz'
-fn_agg_biosample_dirs = f'{dir_exp}/biosample_merge_done.txt'
+fmt_gzip_biosample_fastq_done = f'{dir_read_prep}/biosample_merge_and_gzip_done.txt'
+# fn_agg_biosample_dirs = f'{dir_exp}/biosample_merge_done.txt'
 dir_trimmed = f'{dir_read_prep}/trimmed'
-fmt_fastq_trim_r1 = dir_trimmed + '/{sample}_1.fastq.gz'
-fmt_fastq_trim_r1_unpaired = dir_trimmed + '/{sample}_1_unpaired.fastq.gz'
-fmt_fastq_trim_r2 = dir_trimmed + '/{sample}_2.fastq.gz'
-fmt_fastq_trim_r2_unpaired = dir_trimmed + '/{sample}_2_unpaired.fastq.gz'
 fmt_fastq_trim = dir_trimmed + '/{sample}_{read}.fastq.gz'
+fmt_fastq_trim_r1, fmt_fastq_trim_r2 = [
+    fmt_fastq_trim.format(exp_quant='{exp_quant}', sample='{sample}', read=r) 
+    for r in ['1','2']
+]
+fmt_fastq_trim_r1_unpaired, fmt_fastq_trim_r2_unpaired = [
+    re.sub('.fastq.gz','_unpaired.fastq.gz', fn) 
+    for fn in [fmt_fastq_trim_r1, fmt_fastq_trim_r2]
+]
+# (fmt_fastq_trim, fmt_fastq_trim_r1, fmt_fastq_trim_r1_unpaired, 
+# fmt_fastq_trim_r2, fmt_fastq_trim_r2_unpaired) = [
+#     fn + '.gz' for fn in [
+#         fmt_fastq_trim_unz, fmt_fastq_trim_r1_unz, fmt_fastq_trim_r1_unpaired_unz,
+#         fmt_fastq_trim_r2_unz, fmt_fastq_trim_r2_unpaired_unz
+#     ]
+# ]
 dir_fastqc =  f'{dir_read_prep}/fastqc'
 fmt_fastqc_raw = dir_fastqc + '/raw/{sample}_{read}_fastqc.html'
 fmt_fastqc_trimmed = dir_fastqc + '/trimmed/{sample}_{read}_fastqc.html'
 fmt_multiqc_raw = f'{dir_read_prep}/multiqc/raw/multiqc_report.html'
 fmt_multiqc_trimmed = f'{dir_read_prep}/multiqc/trimmed/multiqc_report.html'
+fn_read_prep_done = f'{dir_exp}/read_prep_done.txt'
 
 # Experiment quant
 fmt_exp_assembly_quant = dir_exp_data + '/{exp_quant}/assembly.fasta'
 dir_quant = dir_exp + '/{exp_quant}/sample_quant'
 dir_salmon_idx = f'{dir_quant}/salmon_index'
 fmt_quant = dir_quant + '/{sample}/quant.sf.gz'
-fmt_exp_salmon_quant_done = f'{dir_quant}/salmon_quant_done.txt'
-fn_salmon_quant_done = f'{dir_exp}/salmon_quant_done.txt'
+fmt_salmon_counts_merge = f'{dir_quant}/salmon_counts_agg.parquet'
+fmt_fromauthor_and_downloaded_counts_merge = dir_exp + '/{exp_auth}/sample_quant/counts_agg.parquet'
+fn_quant_done = f'{dir_exp}/salmon_and_author_quant_done.txt'
+
+

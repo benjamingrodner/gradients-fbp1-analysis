@@ -80,7 +80,7 @@ rule get_bioproject_reads:
                 "$file" \
                 2>> {log:q}
         done
-        pigz {output.dir_out:q}/*.fastq
+        pigz -p {threads} {output.dir_out:q}/*.fastq
         echo "Done" > {output.fn_done:q}
         """
 
@@ -110,13 +110,13 @@ rule get_biosample_info:
                 | efetch -format runinfo \
                 >> {output.srr_info:q} \
                 2>> {log:q}
-
-            cat {output.srr_info:q} \
-                | cut -d ',' -f 1 \
-                | grep SRR \
-                >> {output.srr_list:q} \
-                2>> {log:q}
         done
+        
+        cat {output.srr_info:q} \
+            | cut -d ',' -f 1 \
+            | grep SRR \
+            >> {output.srr_list:q} \
+            2>> {log:q}
         """
 
 rule get_biosample_reads:
@@ -152,15 +152,143 @@ rule get_biosample_reads:
                 "$file" \
                 2>> {log:q}
         done
-        pigz {output.dir_out:q}/*.fastq
+        pigz -p {threads} {output.dir_out:q}/*.fastq
         echo "Done" > {output.fn_done:q}
         """
 
-rule merge_downloads_done:
+rule get_srr_info:
+    output:
+        srr_info = fmt_srr_info,
+        srr_list = fmt_srr_list
+    log:
+        "logs/get_srr_info/{exp_srr}.log"
+    conda:
+        "../envs/sra_tools.yaml"
+    params:
+        srrs = lambda w: DICT_EXP[w.exp_srr]['srrs']
+    shell:
+        """
+        > {output.srr_info:q}
+        > {output.srr_list:q}
+        > {log:q}
+        for bs in {params.srrs}; do
+            esearch -db sra -query "$bs" \
+                | efetch -format runinfo \
+                >> {output.srr_info:q} \
+                2>> {log:q}
+        done
+
+        cat {output.srr_info:q} \
+            | cut -d ',' -f 1 \
+            | grep SRR \
+            >> {output.srr_list:q} \
+            2>> {log:q}        
+        """
+
+
+rule prefetch_srr_reads:
+    input:
+        fmt_srr_list,
+    output:
+        dir_out = temp(directory(dir_srr_prefetch)),
+    log:
+        "logs/prefetch_srr_reads/{exp_srr}.log"
+    benchmark:
+        "benchmarks/prefetch_srr_reads/{exp_srr}.benchmark.txt"
+    threads:
+        config['get_bioproject_reads']['threads'],
+    resources:
+        mem_mb=config['get_bioproject_reads']['mem_mb'],
+        runtime=config['get_bioproject_reads']['runtime'],
+    conda:
+        "../envs/sra_tools.yaml"
+    shell:
+        """
+        cat {input:q} | parallel -j {threads} prefetch {{}} \
+            --output-directory {output.dir_out:q} \
+            > {log:q} 2>&1
+        """
+
+rule get_srr_reads:
+    input:
+        dir_srr_prefetch,
+    output:
+        dir_out = temp(directory(dir_srr_fastq)),
+        fn_done = fmt_srr_fastq_done,
+    log:
+        "logs/get_srr_reads/{exp_srr}.log"
+    benchmark:
+        "benchmarks/get_srr_reads/{exp_srr}.benchmark.txt"
+    threads:
+        config['get_bioproject_reads']['threads'],
+    resources:
+        mem_mb=config['get_bioproject_reads']['mem_mb'],
+        runtime=config['get_bioproject_reads']['runtime'],
+    conda:
+        "../envs/sra_tools.yaml"
+    shell:
+        """
+        for file in {input:q}/*/*.sra; do \
+            fasterq-dump \
+                --split-files \
+                --outdir {output.dir_out:q} \
+                --temp {output.dir_out:q}/tmp \
+                --threads {threads} \
+                --mem {resources.mem_mb}MB \
+                "$file" \
+                2>> {log:q}
+        done
+        pigz -p {threads} {output.dir_out:q}/*.fastq
+        echo "Done" > {output.fn_done:q}
+        """
+
+
+# TESTING: run download in parallel
+# rule get_srr_reads:
+#     output:
+#         fn_out = temp(fmt_srr_fastq),
+#         dir_out = temp(directory(dir_srr_fastq)),
+#     log:
+#         "logs/get_srr_reads/{exp_srr}/{srr}.log"
+#     benchmark:
+#         "benchmarks/get_srr_reads/{exp_srr}/{srr}.benchmark.txt"
+#     conda:
+#         "../envs/sra_tools.yaml"
+#     shell:
+#         """
+#         prefetch \
+#             {wildcards.srr} \
+#             --output-directory {output.dir_out:q} \
+#             2> {log:q}
+        
+#         file={output.dir_out:q}/{wildcards.srr}/{wildcards.srr}.sra
+#         fasterq-dump \
+#             --split-files \
+#             --outdir {output.dir_out:q} \
+#             --temp {output.dir_out:q}/tmp \
+#             "$file" \
+#             2>> {log:q}
+
+#         pigz -p {output.dir_out:q}/{wildcards.srr}_*.fastq
+#         """
+
+
+# rule srr_download_done:
+#     input:
+#         get_fns_srr_fastq,
+#     output:
+#         fmt_srr_fastq_done
+#     shell:
+#         """
+#         echo {input:q} > {output:q}
+
+#         """
+
+rule read_and_count_downloads_done:
     input:
         get_fns_downloads_done,
     output:
-        fn_merge_downloads_done,
+        fn_read_and_count_downloads_done,
     shell:
         """
         echo {input:q} > {output:q}

@@ -5,3 +5,9 @@ dependencies:
   - conda-forge::biopython=1.87
   - conda-forge::ete4=4.3.0
   - conda-forge::matplotlib=3.10.9
+  - conda-forge::click=8.1.8
+  - conda-forge::pandas=2.2.3
+  - conda-forge::pyarrow=19.0.1
+  - conda-forge::python-duckdb=1.2.2
+  - conda-forge::duckdb-cli=1.2.2
+  - conda-forge::tqdm=4.67.1

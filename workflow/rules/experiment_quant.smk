@@ -16,7 +16,7 @@ rule salmon_idx:
         mem_mb=config['salmon']["index"]['mem_mb'],
         runtime=config['salmon']["index"]['runtime'],
     conda:
-        "../envs/salmon.yml"
+        "../envs/salmon.yaml"
     shell:
         """
         [[ ! -d {params.out_dir:q} ]] && mkdir -p {params.out_dir:q} 2> {log:q}
@@ -60,24 +60,67 @@ rule salmon_counts:
         pigz -p {threads} {params.quant_nogz:q} 2>> {log:q}        
         """
 
-rule exp_quant_done:
+rule merge_salmon_counts:
     input:
-        gz_done = fn_agg_biosample_dirs,
+        wait = fn_read_prep_done,
         fns = aggregate_exp_salmon_counts,
-    output:
-        fmt_exp_salmon_quant_done,
+    output: 
+        fmt_salmon_counts_merge,
+    log:
+        "logs/merge_salmon_counts/{exp_quant}.log"
+    benchmark:
+        "benchmarks/merge_salmon_counts/{exp_quant}.benchmark.txt"
+    threads:
+        config['salmon']['merge']['threads'],
+    resources:
+        mem_mb=config['salmon']['merge']['mem_mb'],
+        runtime=config['salmon']['merge']['runtime'],
+    conda:
+        "../envs/python.yaml"
+    params:
+        script=config['dir_scripts'] + "/aggregate_counts.py",
     shell:
         """
-        echo {input.fns:q} > {output:q}
+        python3 {params.script:q} --jobs {threads} {input.fns:q} {output:q} 2> {log:q}
         """
 
+# rule salmon_quant_done:
+#     input:
+#         expand_exp_quant(fmt_salmon_counts_merge)
+#     output:
+#         fn_salmon_quant_done,
+#     shell:
+#         """
+#         echo {input:q} > {output:q}
+#         """
+
+rule merge_counts_fromauthor_and_downloaded:
+    input:
+        download_done = fn_read_and_count_downloads_done,
+    output:
+        fmt_fromauthor_and_downloaded_counts_merge,
+    log:
+        "logs/merge_salmon_counts/{exp_auth}.log"
+    benchmark:
+        "benchmarks/merge_salmon_counts/{exp_auth}.benchmark.txt"
+    threads:
+        config['salmon']['merge']['threads'],
+    conda:
+        "../envs/python.yaml"
+    params:
+        script = lambda w: get_script_merge_counts_auth(w.exp_auth),
+        glob_counts = lambda w: get_glob_counts_auth(w.exp_auth),
+    shell:
+        """
+        FNS=$( ls {params.glob_counts} )
+        python3 {params.script} -j {threads} $FNS {output:q} 2> {log:q}
+        """
 
 rule quant_done:
     input:
-        expand_exp_quant(fmt_exp_salmon_quant_done)
+        expand_exp_quant(fmt_salmon_counts_merge),
+        expand_exp_auth(fmt_fromauthor_and_downloaded_counts_merge),
     output:
-        fn_salmon_quant_done,
+        fn_quant_done,
     shell:
-        """
-        echo {input:q} > {output:q}
-        """
+        "echo {input:q} > {output:q}"

@@ -182,6 +182,11 @@ salmon:
     threads: 16
     mem_mb: 100000
     runtime: 600
+  merge:
+    threads: 16
+    mem_mb: 100000
+    runtime: 120
+
 
 
 
