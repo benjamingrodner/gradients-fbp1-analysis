@@ -187,7 +187,16 @@ salmon:
     mem_mb: 100000
     runtime: 120
 
+cluster_counts:
+  threads: 4
+  mem_mb: 10000
+  runtime: 60
 
+deseq:
+  threads: 4
+  mem_mb: 10000
+  runtime: 120
+  min_sum_counts: 1e2
 
 
 # Color palletes 

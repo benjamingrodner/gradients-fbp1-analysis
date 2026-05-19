@@ -3,6 +3,23 @@ import glob
 import yaml
 import re
 
+def get_fn_sample_info(exp):
+    m = DICT_EXP[exp]['method_counts']
+    if m == 'salmon-bioproject':
+        return fmt_bioproject_info.format(exp_bioproject=exp)
+    elif m == 'salmon-biosample':
+        return fmt_biosample_info.format(exp_biosample=exp)
+    elif m == 'salmon-srr':
+        return fmt_srr_info.format(exp_srr=exp)
+    else:
+        return 'None'
+
+def get_colname_contigs(exp):
+    fn = DICT_EXP[exp].get('colname_contigs')
+    if fn is None:
+        fn = "contig_name"
+    return fn
+
 def get_script_merge_counts_auth(exp):
     fn = DICT_EXP[exp].get('script_merge_counts')
     if fn is None:
@@ -145,7 +162,7 @@ def get_exp_assm_fn_or_link(exp):
     else:
         raise ValueError(f"Method {method} is not available for getting the experiment assembly")
 
-def get_exp_rep_seqs(wildcards):
+def get_exp_clusters(fmt):
     fns = []
     for exp in DICT_EXP.keys():
         d = checkpoints.group_exp_hitnames.get(
@@ -154,7 +171,7 @@ def get_exp_rep_seqs(wildcards):
         for f in os.listdir(d):
             if f.startswith(best_hit_prefix):
                 gene = f.replace(best_hit_prefix, "").replace(best_hit_ext,"")
-                fn = fmt_exp_rep_seqs.format(exp=exp, gene=gene)
+                fn = fmt.format(exp=exp, gene=gene)
                 fns.append(fn)
     return fns
 
@@ -500,8 +517,19 @@ fmt_exp_assembly_quant = dir_exp_data + '/{exp_quant}/assembly.fasta'
 dir_quant = dir_exp + '/{exp_quant}/sample_quant'
 dir_salmon_idx = f'{dir_quant}/salmon_index'
 fmt_quant = dir_quant + '/{sample}/quant.sf.gz'
-fmt_salmon_counts_merge = f'{dir_quant}/salmon_counts_agg.parquet'
-fmt_fromauthor_and_downloaded_counts_merge = dir_exp + '/{exp_auth}/sample_quant/counts_agg.parquet'
+ext_counts_agg = 'counts_agg.parquet'
+fmt_salmon_counts_merge = f'{dir_quant}/{ext_counts_agg}'
+fmt_fromauthor_and_downloaded_counts_merge = dir_exp + '/{exp_auth}/sample_quant/' + ext_counts_agg
 fn_quant_done = f'{dir_exp}/salmon_and_author_quant_done.txt'
+
+# deseq
+fmt_exp_counts_merge = dir_exp + '/{exp}/sample_quant/' + ext_counts_agg
+dir_exp_deseq = dir_exp + '/{exp}/deseq'
+dir_exp_counts_clust = f'{dir_exp_deseq}/counts_clust-genes_{bn_hmm_genes}-{bn_exp_clust}'
+fmt_exp_counts_clust = f'{dir_exp_counts_clust}/counts.parquet'
+fmt_exp_meta = f'{dir_exp_deseq}/metadata.csv'
+dir_exp_deseq = f'{dir_exp_counts_clust}/stats'
+fmt_exp_deseq = f'{dir_exp_counts_clust}/plot_foldchange.pdf'
+fn_deseq_done = f'{dir_exp}/deseq_done.txt'
 
 

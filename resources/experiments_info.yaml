@@ -7,6 +7,9 @@ amphora-graff_van_creveld_et_al_2023:
     biosamples: ["SAMN31645508","SAMN31645507","SAMN31645506","SAMN31645505","SAMN31645504","SAMN31645503","SAMN31645502","SAMN31645501"]
     trimmomatic_opts: "ILLUMINACLIP:resources/adapters/TruSeq3-PE-2.fa:2:30:10:1:true MAXINFO:135:0.5 LEADING:3 TRAILING:3 MINLEN:50 AVGQUAL:20"
     adapter_file: resources/adapters/TruSeq3-PE-2.fa
+    regex_condition: '(?<=1\:\s)(?P<condition>.+)(?=\sN\d$)'
+    deseq_ctrl_tests:
+        'Ac Control': ['Ac Hydrogren peroxide','Ac Iron limitation',]
 chaetoceros-graff_van_creveld_et_al_2023:
     prefix: chasp_gvc
     taxname: "Chaetoceros sp. CCMP199"
@@ -16,6 +19,9 @@ chaetoceros-graff_van_creveld_et_al_2023:
     biosamples: ["SAMN31645494","SAMN31645493","SAMN31645492","SAMN31645491","SAMN31645490"]
     trimmomatic_opts: "ILLUMINACLIP:resources/adapters/TruSeq3-PE-2.fa:2:30:10:1:true MAXINFO:135:0.5 LEADING:3 TRAILING:3 MINLEN:50 AVGQUAL:20"
     adapter_file: resources/adapters/TruSeq3-PE-2.fa
+    regex_condition: '(?<=1\:\s)(?P<condition>.+)(?=\sN\d$)'
+    deseq_ctrl_tests:
+        'Csp Control': ['Csp Hydrogren peroxide','Csp Iron limitation',]
 cylindrotheca-graff_van_creveld_et_al_2023:
     prefix: cylclo_gvc
     taxname: "Cylindrotheca closterium"
@@ -25,6 +31,9 @@ cylindrotheca-graff_van_creveld_et_al_2023:
     biosamples: ["SAMN31645500","SAMN31645499","SAMN31645498","SAMN31645497","SAMN31645496","SAMN31645495"]
     trimmomatic_opts: "ILLUMINACLIP:resources/adapters/TruSeq3-PE-2.fa:2:30:10:1:true MAXINFO:135:0.5 LEADING:3 TRAILING:3 MINLEN:50 AVGQUAL:20"
     adapter_file: resources/adapters/TruSeq3-PE-2.fa
+    regex_condition: '(?<=1\:\s)(?P<condition>.+)(?=\sN\d$)'
+    deseq_ctrl_tests:
+        'Cc Control': ['Cc Hydrogren peroxide','Cc Iron limitation',]
 t_oceanica-graff_van_creveld_et_al_2023:
     prefix: thaoce_gvc
     taxname: "Thalassiosira oceanica CCMP1005"
@@ -34,6 +43,9 @@ t_oceanica-graff_van_creveld_et_al_2023:
     biosamples: ["SAMN31645517","SAMN31645516","SAMN31645515","SAMN31645514","SAMN31645513","SAMN31645512","SAMN31645511","SAMN31645510","SAMN31645509"]
     trimmomatic_opts: "ILLUMINACLIP:resources/adapters/TruSeq3-PE-2.fa:2:30:10:1:true MAXINFO:135:0.5 LEADING:3 TRAILING:3 MINLEN:50 AVGQUAL:20"
     adapter_file: resources/adapters/TruSeq3-PE-2.fa
+    regex_condition: '(?<=1\:\s)(?P<condition>.+)(?=\sN\d$)'
+    deseq_ctrl_tests:
+        'To Control': ['To Hydrogren peroxide','To Iron limitation',]
 t_pseudonana-graff_van_creveld_et_al_2023:
     prefix: thapse_gvc
     taxname: "Thalassiosira pseudonana CCMP1335"
@@ -43,6 +55,9 @@ t_pseudonana-graff_van_creveld_et_al_2023:
     biosamples: ["SAMN31645526","SAMN31645525","SAMN31645524","SAMN31645523","SAMN31645522","SAMN31645521","SAMN31645520","SAMN31645519","SAMN31645518"]
     trimmomatic_opts: "ILLUMINACLIP:resources/adapters/TruSeq3-PE-2.fa:2:30:10:1:true MAXINFO:135:0.5 LEADING:3 TRAILING:3 MINLEN:50 AVGQUAL:20"
     adapter_file: resources/adapters/TruSeq3-PE-2.fa
+    regex_condition: '(?<=1\:\s)(?P<condition>.+)(?=\sN\d$)'
+    deseq_ctrl_tests:
+        'Tp Control': ['Tp Hydrogren peroxide','Tp Iron limitation',]
 phatr_timeseries-smith_et_al_2016:
     prefix: phatri_smi
     taxname: "Phaeodactylum tricornutum"
@@ -52,6 +67,15 @@ phatr_timeseries-smith_et_al_2016:
     bioproject: PRJNA310815
     trimmomatic_opts: "MAXINFO:135:0.5 LEADING:3 TRAILING:3 MINLEN:25 AVGQUAL:20"
     link_counts: https://doi.org/10.1371/journal.pgen.1006490.s005
+    regex_condition: r'(?<=\d\:\s)(?P<condition>.+)(?=_rep\d$)'
+    deseq_ctrl_tests:
+        HighFe_2PM: ['MedFe_2PM','LowFe_2PM']
+        HighFe_6PM: ['MedFe_6PM','LowFe_6PM']
+        HighFe_10PM: ['MedFe_10PM','LowFe_10PM']
+        HighFe_2AM: ['MedFe_2AM','LowFe_2AM']
+        HighFe_6AM: ['MedFe_6AM','LowFe_6AM']
+        HighFe_10AM: ['MedFe_10AM','LowFe_10AM']
+        'HighFe_2PM(b)': ['MedFe_2PM(b)','LowFe_2PM(b)']
 p_antarctica-rizkallah_et_al_2020:
     prefix: phaant_riz
     taxname: "Phaeocystis antarctica"
@@ -60,6 +84,25 @@ p_antarctica-rizkallah_et_al_2020:
     method_counts: download
     link_counts: "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE102nnn/GSE102608/suppl/GSE102608%5FPant%5FS2%5FFile%5FGenes%5Fallrep.counts.matrix.txt.gz"
     bioproject: PRJNA395466
+    colname_contigs: column00
+    sample_conditions:
+        Pant_0h_rep1: 0h
+        Pant_0h_rep2: 0h
+        Pant_0h_rep3: 0h
+        Pant_0h_rep4: 0h
+        Pant_14h_rep1: 14h
+        Pant_14h_rep3: 14h
+        Pant_14h_rep4: 14h
+        Pant_24h_rep1: 24h
+        Pant_24h_rep2: 24h
+        Pant_24h_rep3: 24h
+        Pant_24h_rep4: 24h
+        Pant_72h_rep1: 72h
+        Pant_72h_rep2: 72h
+        Pant_72h_rep3: 72h
+        Pant_72h_rep4: 72h
+    deseq_ctrl_tests:
+        0h: ['14h','24h','72h']
 c_closterium_uga4-quirk_sunda_cohen_2025:
     prefix: cylclo4_qui
     taxname: "Cylindrotheca closterium"
@@ -69,6 +112,15 @@ c_closterium_uga4-quirk_sunda_cohen_2025:
     glob_counts: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/counts/c_closterium_uga4/*/quant.sf
     script_merge_counts: workflow/scripts/aggregate_counts.py
     bioproject: PRJNA1106502
+    colname_contigs: 
+    sample_conditions:
+        count_04add_backA_quant: add_back
+        count_04add_backB_quant: add_back
+        count_04pFe21_9A_quant: low_Fe
+        count_04pFe21_9B_quant: low_Fe
+        count_04pFe21_9C_quant: low_Fe
+    deseq_ctrl_tests:
+        add_back: ['low_Fe']
 c_closterium_uga8-quirk_sunda_cohen_2025:
     prefix: cylclo8_qui
     taxname: "Cylindrotheca closterium"
@@ -78,6 +130,18 @@ c_closterium_uga8-quirk_sunda_cohen_2025:
     glob_counts: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/counts/c_closterium_uga8/*/quant.sf
     script_merge_counts: workflow/scripts/aggregate_counts.py
     bioproject: PRJNA1106502
+    sample_conditions:
+        count_08add_backB_quant: add_back
+        count_08add_backC_quant: add_back
+        count_08pFe19A_quant: high_Fe
+        count_08pFe19B_quant: high_Fe
+        count_08pFe19C_quant: high_Fe
+        count_08pFe21_9A_quant: low_Fe
+        count_08pFe21_9B_quant: low_Fe
+        count_08pFe21_9C_quant: low_Fe
+    deseq_ctrl_tests:
+        high_Fe: ['low_Fe']
+        add_back: ['low_Fe']
 g_huxleyii_uga13-quirk_sunda_cohen_2025:
     prefix: gephux_qui
     taxname: "Gephyrocapsa huxleyi"
@@ -87,6 +151,19 @@ g_huxleyii_uga13-quirk_sunda_cohen_2025:
     glob_counts: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/counts/g_huxleyii_uga13/*/quant.sf
     script_merge_counts: workflow/scripts/aggregate_counts.py
     bioproject: PRJNA1106502
+    sample_conditions:
+        count_06add_backA_quant: add_back
+        count_06add_backB_quant: add_back
+        count_06add_backC_quant: add_back
+        count_06pFe19A_quant: high_Fe
+        count_06pFe19B_quant: high_Fe
+        count_06pFe19C_quant: high_Fe
+        count_06pFe21_9A_quant: low_Fe
+        count_06pFe21_9B_quant: low_Fe
+        count_06pFe21_9C_quant: low_Fe
+    deseq_ctrl_tests:
+        high_Fe: ['low_Fe']
+        add_back: ['low_Fe']
 g_oceanica_uga13-quirk_sunda_cohen_2025:
     prefix: gepoce_qui
     taxname: "Gephyrocapsa oceanica"
@@ -96,6 +173,19 @@ g_oceanica_uga13-quirk_sunda_cohen_2025:
     glob_counts: data/experiments/cylindrotheca_gephyrocapsa-quirk_sunda_cohen_2025/counts/g_oceanica_uga13/*/quant.sf
     script_merge_counts: workflow/scripts/aggregate_counts.py
     bioproject: PRJNA1106502
+    sample_conditions:
+        count_13add_backA_quant: add_back
+        count_13add_backB_quant: add_back
+        count_13add_backC_quant: add_back
+        count_13pFe19A_quant: high_Fe
+        count_13pFe19B_quant: high_Fe
+        count_13pFe19C_quant: high_Fe
+        count_13pFe21_9A_quant: low_Fe
+        count_13pFe21_9B_quant: low_Fe
+        count_13pFe21_9C_quant: low_Fe
+    deseq_ctrl_tests:
+        high_Fe: ['low_Fe']
+        add_back: ['low_Fe']
 phatr_starvation-villar_et_al_2025:
     prefix: phatri_vil
     taxname: "Phaeodactylum tricornutum"
@@ -109,6 +199,12 @@ phatr_starvation-villar_et_al_2025:
         "SRR23545529","SRR23545528","SRR23545517","SRR23545506","SRR23545495","SRR23545484", # 2Weeks
     ]
     trimmomatic_opts: "MAXINFO:135:0.5 LEADING:3 TRAILING:3 MINLEN:36 AVGQUAL:20"
+    srr_info_col: 'LibraryName'
+    regex_condition: '(?P<condition>^.+HA\d)'
+    subs_condition: [['_','']]
+    deseq_ctrl_tests:
+        FeHA1: ['3D-HA1','7D-HA1','2W-HA1']
+        FeHA2: ['3D-HA2','7D-HA2','2W-HA2']
 micromonas-meyer_et_al_2025:
     prefix: mic_mey
     taxname: "uncultured Bathycoccus"
@@ -117,6 +213,15 @@ micromonas-meyer_et_al_2025:
     method_counts: from_author
     glob_counts: data/experiments/micromonas-meyer_et_al_2025/contig_counts.csv
     bioproject: PRJNA1072555
+    colname_contigs: column00
+    sample_conditions:
+        counts..NO3.Dep.A_quant: deplete
+        counts..NO3.Dep.B_quant: deplete
+        counts..NO3.Dep.C_quant: deplete
+        counts..NO3.Rep.B_quant: replete
+        counts..NO3.Rep.C_quant: replete
+    deseq_ctrl_tests:
+        'replete': ['deplete']
 p_granii-cohen_et_al_2018:
     prefix: psegra_coh
     taxname: "Pseudo-nitzschia granii"
@@ -124,6 +229,15 @@ p_granii-cohen_et_al_2018:
     link_assembly: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/Trinity.fasta"
     method_counts: download
     link_counts: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/query_KO_bowtiecounts.tab"
+    colname_contigs: query
+    sample_conditions:
+        L1: low_Fe
+        L2: low_Fe
+        H1: high_Fe
+        H2: high_Fe
+        H3: high_Fe
+    deseq_ctrl_tests:
+        'high_Fe': ['low_Fe']
 # chlorella-mansfeldt_et_al_2016:
 #     prefix: chl_man
 #     taxname: "Chlorella sp. SAG 211-18"
