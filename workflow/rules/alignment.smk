@@ -41,7 +41,7 @@ rule merge_clusters_with_crystal_struct_seqs:
     input:
         fn_db_rep_seqs_sub,
         get_env_rep_seqs,
-        get_exp_clusters(fmt_exp_rep_seqs),
+        get_exp_rep_seqs,
         expand(fmt_crystal_seqs, rcsb_id=config['rcsb_ids']),
         glob.glob(config['dir_ref_man'] + '/*'),
     output: 

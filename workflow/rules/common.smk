@@ -2,12 +2,34 @@ from pathlib import Path
 import glob
 import yaml
 import re
+import os
+
+def get_dirs_exp_deseq_plot(wildcards):
+    drs = []
+    for exp in DICT_EXP.keys():
+        d = checkpoints.group_exp_hitnames.get(
+            exp=exp
+        ).output[0]
+        fns = glob.glob(f'{d}/*')
+        if len(fns) > 0:
+            drs.append(dir_exp_deseq_plot.format(exp=exp))
+    return drs
+
+def get_fn_exp_counts_merge(exp):
+    m = DICT_EXP[exp]['method_counts']
+    if 'salmon' in m:
+        return fmt_salmon_counts_merge.format(exp_quant=exp)
+    elif m in ['from_author','download']:
+        return fmt_fromauthor_and_downloaded_counts_merge.format(exp_auth=exp)
+    else:
+        raise ValueError(f"method_counts is not defined for experiment {exp}")
+
 
 def get_fn_sample_info(exp):
     m = DICT_EXP[exp]['method_counts']
     if m == 'salmon-bioproject':
         return fmt_bioproject_info.format(exp_bioproject=exp)
-    elif m == 'salmon-biosample':
+    elif m == 'salmon-biosamples':
         return fmt_biosample_info.format(exp_biosample=exp)
     elif m == 'salmon-srr':
         return fmt_srr_info.format(exp_srr=exp)
@@ -63,7 +85,7 @@ def expand_biosamples(wildcards, fmt, get_reads=True):
     d = checkpoints.merge_biosample_fastqs.get(exp_quant=exp).output[0]
     fns_d = glob.glob(f'{d}/*')
     regex = fmt_biosample_fastq_merged.format(
-        exp_quant=exp, sample="(?P<sample>\w+)", read="(?P<read>\w+)"
+        exp_quant=exp, sample=r"(?P<sample>\w+)", read=r"(?P<read>\w+)"
     )
     fns = []
     for fn in fns_d:
@@ -162,7 +184,7 @@ def get_exp_assm_fn_or_link(exp):
     else:
         raise ValueError(f"Method {method} is not available for getting the experiment assembly")
 
-def get_exp_clusters(fmt):
+def get_exp_rep_seqs(wildcards):
     fns = []
     for exp in DICT_EXP.keys():
         d = checkpoints.group_exp_hitnames.get(
@@ -171,8 +193,20 @@ def get_exp_clusters(fmt):
         for f in os.listdir(d):
             if f.startswith(best_hit_prefix):
                 gene = f.replace(best_hit_prefix, "").replace(best_hit_ext,"")
-                fn = fmt.format(exp=exp, gene=gene)
+                fn = fmt_exp_rep_seqs.format(exp=exp, gene=gene)
                 fns.append(fn)
+    return fns
+
+def get_exp_clusters(exp):
+    fns = []
+    d = checkpoints.group_exp_hitnames.get(
+        exp=exp
+    ).output[0]
+    for f in os.listdir(d):
+        if f.startswith(best_hit_prefix):
+            gene = f.replace(best_hit_prefix, "").replace(best_hit_ext,"")
+            fn = fmt_exp_clusters.format(exp=exp, gene=gene)
+            fns.append(fn)
     return fns
 
 def get_env_rep_seqs(wildcards):
@@ -518,8 +552,8 @@ dir_quant = dir_exp + '/{exp_quant}/sample_quant'
 dir_salmon_idx = f'{dir_quant}/salmon_index'
 fmt_quant = dir_quant + '/{sample}/quant.sf.gz'
 ext_counts_agg = 'counts_agg.parquet'
-fmt_salmon_counts_merge = f'{dir_quant}/{ext_counts_agg}'
-fmt_fromauthor_and_downloaded_counts_merge = dir_exp + '/{exp_auth}/sample_quant/' + ext_counts_agg
+fmt_salmon_counts_merge = f'{dir_quant}/salmon_{ext_counts_agg}'
+fmt_fromauthor_and_downloaded_counts_merge = dir_exp + '/{exp_auth}/sample_quant/author_' + ext_counts_agg
 fn_quant_done = f'{dir_exp}/salmon_and_author_quant_done.txt'
 
 # deseq
@@ -529,7 +563,7 @@ dir_exp_counts_clust = f'{dir_exp_deseq}/counts_clust-genes_{bn_hmm_genes}-{bn_e
 fmt_exp_counts_clust = f'{dir_exp_counts_clust}/counts.parquet'
 fmt_exp_meta = f'{dir_exp_deseq}/metadata.csv'
 dir_exp_deseq = f'{dir_exp_counts_clust}/stats'
-fmt_exp_deseq = f'{dir_exp_counts_clust}/plot_foldchange.pdf'
+dir_exp_deseq_plot = f'{dir_exp_counts_clust}/horizontal_barplots'
 fn_deseq_done = f'{dir_exp}/deseq_done.txt'
 
 

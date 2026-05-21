@@ -17,12 +17,14 @@ include: "rules/annotate_tree.smk"
 include: "rules/experiment_downloads.smk"
 include: "rules/experiment_read_prep.smk"
 include: "rules/experiment_quant.smk"
+include: "rules/deseq.smk"
 
 rule all:
     input:
         fn_read_and_count_downloads_done,
         fn_read_prep_done,
         fn_quant_done,
+        fn_deseq_done,
         # fn_place_exp_tree_done,
         # fn_place_env_tree_done,
         # fn_fbp1_colorstrip,

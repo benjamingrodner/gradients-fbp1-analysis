@@ -6,15 +6,15 @@ import os
 import click
 import ibis
 import yaml
+from ibis import _, selectors
 
 def aggregate_mapping(t, mapping, col):
     # mamke groups for contigs that we clustered, 
     # Leave other contigs unclustered
-    category_col = t[col].cases(mapping).else_(t[col]).name("cluster")
-    return t.group_by(category_col).aggregate(
-        t.numeric().sum()
+    category_col = t[col].cases(*mapping.items(), else_ = t[col]).name("cluster")
+    return t.group_by(category_col).agg(
+        selectors.across(selectors.numeric(), _.sum())
     )
-
 def load_config(config_path: str) -> dict:
     """Loads and returns the YAML configuration."""
     try:
@@ -35,9 +35,10 @@ def load_config(config_path: str) -> dict:
 @click.option(
     "--clusters",
     "-l",
-    nargs=-1,
+    multiple=True,
     type=click.Path(exists=True, dir_okay=False),
-    required=True,
+    required=False,
+    default=None,
     help="Paths to the input cluster TSV files.",
 )
 @click.option(
@@ -86,14 +87,15 @@ def main(
         counts_table = con.read_parquet(counts, table_name="counts")
 
         # 4. Load the TSV files and add to mapping
-        dict_contig_clust = {}
-        for fn_cl in clusters:
-            clusters_table = con.read_csv(
-                fn_cl, table_name="clusters", sep="\t", 
-                column_names=["cluster","contig"]
-            ).to_pandas()
-            for clust, cont in clusters_table.values:
-                dict_contig_clust[cont] = clust
+        if clusters is not None:
+            dict_contig_clust = {}
+            for fn_cl in clusters:
+                clusters_table = con.read_csv(
+                    fn_cl, table_name="clusters", sep="\t", 
+                    column_names=["cluster","contig"], header=False
+                ).to_pandas()
+                for clust, cont in clusters_table.values:
+                    dict_contig_clust[cont] = clust
 
     except Exception as e:
         raise click.ClickException(f"Error loading data tables: {e}")
@@ -102,7 +104,11 @@ def main(
     # Get mapping
 
     # Aggregate counts into clusters
-    out_table = aggregate_mapping(counts_table, dict_contig_clust, colname_contig)
+    if clusters is not None:
+        out_table = aggregate_mapping(counts_table, dict_contig_clust, colname_contig)
+    else:
+        out_table = counts_table
+        click.echo(f"No clusters passed, copying over the input counts table")
 
     # Write table
     click.echo(f"Writing output to: {output}")

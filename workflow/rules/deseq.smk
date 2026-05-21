@@ -1,8 +1,8 @@
 rule cluster_experiment_counts:
     input:
         wait = fn_quant_done,
-        count = fmt_exp_counts_merge,
-        clust = get_exp_clusters(fmt_exp_clusters),
+        counts = lambda w: get_fn_exp_counts_merge(w.exp),
+        clusts = lambda w: get_exp_clusters(w.exp),
     output: 
         fmt_exp_counts_clust,
     log:
@@ -21,13 +21,17 @@ rule cluster_experiment_counts:
         colname = lambda w: get_colname_contigs(w.exp),
     shell:
         """
+        ARG_l="-l {input.clusts} "
+        if [[ -z {input.clusts:q} ]]; then
+            ARG_l=""
+        fi
         python3 {params.script:q} \
-            -c {input.count:q} \
-            -l {input.clust:q} \
+            -c {input.counts:q} \
             -n {params.colname} \
             -o {output:q} \
             -m {resources.mem_mb}M \
             -t {threads} \
+            $ARG_l\
             2> {log:q}
         """
 
@@ -47,7 +51,7 @@ rule get_experiment_metadata:
     shell:
         """
         ARG_S="-s {params.fn_sample_info} "
-        if [[ {params.fn_sample_info} == "None" ]]; do
+        if [[ {params.fn_sample_info:q} == "None" ]]; then
             ARG_S=""
         fi
         python3 {params.script:q} \
@@ -63,7 +67,7 @@ rule run_exp_deseq:
         counts = fmt_exp_counts_clust,
         meta = fmt_exp_meta,
     output: 
-        dir_exp_deseq,
+        directory(dir_exp_deseq),
     log:
         "logs/run_exp_deseq/{exp}.log"
     benchmark:
@@ -79,7 +83,7 @@ rule run_exp_deseq:
         script=config['dir_scripts'] + "/run_exp_deseq.py",
         fn_exp_info = config['fn_experiment_info'],
         colname = lambda w: get_colname_contigs(w.exp),
-        min_mean_counts = config['deseq']['min_sum_counts']
+        min_mean_counts = config['deseq']['min_sum_counts'],
     shell:
         """
         python3 {params.script:q} \
@@ -87,6 +91,8 @@ rule run_exp_deseq:
             {input.meta:q} \
             {params.fn_exp_info:q} \
             {wildcards.exp} \
+            cluster \
+            {params.min_mean_counts} \
             {output:q} \
             {threads:q} \
             2> {log:q}
@@ -98,22 +104,39 @@ rule plot_exp_foldchange:
         meta = fmt_exp_meta,
         dir_stats = dir_exp_deseq,
     output:
-        fmt_exp_plot,
+        directory(dir_exp_deseq_plot),
+    log:
+        "logs/plot_exp_foldchange/{exp}.log"
+    threads:
+        config['deseq']['threads'],
     conda:
         "../envs/deseq.yaml"
     params:
         script=config['dir_scripts'] + "/plot_exp_foldchange.py",
         fn_config = config['fn_config'],
+        fn_exp_info = config['fn_experiment_info'],
+        fmt_clust = lambda w: fmt_exp_clusters,
+        colname = lambda w: get_colname_contigs(w.exp),
     shell:
         """
         python3 {params.script:q} \
+            -c {input.counts:q} \
+            -n cluster \
+            -l {params.fmt_clust} \
+            -m {input.meta:q} \
+            -s {input.dir_stats:q} \
+            -g {params.fn_config:q} \
+            -e {params.fn_exp_info:q} \
+            -x {wildcards.exp} \
+            -o {output:q} \
+            -t {threads} \
             2> {log:q}
         """
 
 
 rule deseq_done:
     input:
-        expand(fmt_exp_plot, exp=DICT_EXP.keys())
+        get_dirs_exp_deseq_plot,
     output:
         fn_deseq_done,
     shell:

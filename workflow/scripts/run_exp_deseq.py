@@ -25,6 +25,7 @@
 # edited for troubleshooting
 
 import os
+import re
 import sys
 import ibis
 import yaml
@@ -32,7 +33,7 @@ import click
 import pickle
 import pandas as pd
 from pydeseq2.ds import DeseqStats
-from pydeseq2.dataset import DeseqDataset
+from pydeseq2.dds import DeseqDataSet
 from pydeseq2.default_inference import DefaultInference
 
 
@@ -41,7 +42,8 @@ from pydeseq2.default_inference import DefaultInference
 @click.argument("metadata_file", type=click.Path(exists=True))
 @click.argument("config_file", type=click.Path(exists=True))
 @click.argument("experiment", type=str)
-@click.argument("min_sum_counts", type=int)
+@click.argument("colname_contigs", type=str)
+@click.argument("min_sum_counts", type=float)
 @click.argument("output_dir", type=click.Path())
 @click.argument("threads", type=int)
 def main(
@@ -49,6 +51,7 @@ def main(
     metadata_file,
     config_file,
     experiment,
+    colname_contigs,
     min_sum_counts,
     output_dir,
     threads,
@@ -69,7 +72,6 @@ def main(
         sys.exit(1)
 
     exp_config = config[experiment]
-    colname_contigs = exp_config["colname_contigs"]
     dict_ctrl_tests = exp_config['deseq_ctrl_tests']
 
     metadata_df = pd.read_csv(metadata_file, index_col=0)
@@ -138,43 +140,43 @@ def main(
         )
         sys.exit(1)
 
-    # -------------------------------------------------------------------------
-    # 3. Build DeseqDataset
-    # -------------------------------------------------------------------------
-    click.echo("Building DeseqDataset...")
-    # Transpose matrix for PyDESeq2 compatibility (samples as rows, genes as columns)
-    counts_transposed = new_counts.T.astype(int)
-    metadata_subset = metadata_df.loc[counts_transposed.index]
-    
-    inference = DefaultInference(n_cpus=threads)
-    dds = DeseqDataset(
-        counts=counts_transposed,
-        metadata=metadata_subset,
-        design="~condition",
-        inference=inference,
-    )
 
     # -------------------------------------------------------------------------
     # 4. Run DESeq2 and Write Outputs
     # -------------------------------------------------------------------------
-    click.echo("Running DESeq2...")
-    dds.deseq2()
 
     os.makedirs(output_dir, exist_ok=True)
 
     for control_condition, tests in dict_ctrl_tests.items():
+        click.echo(f"Building DeseqDataset for control {control_condition}...")
+        # Transpose matrix for PyDESeq2 compatibility (samples as rows, genes as columns)
+        conds = [control_condition] + tests
+        cols = metadata_df[metadata_df['condition'].isin(conds)].index
+        counts_transposed = new_counts[cols].T.astype(int)
+        metadata_sort = metadata_df.loc[counts_transposed.index]
+
+        inference = DefaultInference(n_cpus=threads)
+        design = f"C(condition, contr.treatment(base='{control_condition}'))"
+        dds = DeseqDataSet(
+            counts=counts_transposed,
+            metadata=metadata_sort,
+            design=f'~ {design}',
+            inference=inference,
+        )
+        click.echo("Running DESeq2...")
+        dds.deseq2()
         for test in tests:
             click.echo(f"Extracting stats for contrast: {test} vs {control_condition}")
-
             stat_res = DeseqStats(
                 dds,
                 contrast=["condition", test, control_condition],
                 n_cpus=threads,
             )
             stat_res.summary()
-            stat_res.lfc_shrink(coeff=f'exp[T.{test}]'); # Account for high variance, low count, and low sample number
+            stat_res.lfc_shrink(coeff=f'{design}[T.{test}]'); # Account for high variance, low count, and low sample number
             out_filename = f"{experiment}_{test}_vs_{control_condition}_stats.pkl"
             out_path = os.path.join(output_dir, out_filename)
+            out_path = re.sub(r'\s', '_', out_path)
 
             with open(out_path, "wb") as f:
                 pickle.dump(stat_res, f)

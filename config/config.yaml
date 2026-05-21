@@ -196,7 +196,7 @@ deseq:
   threads: 4
   mem_mb: 10000
   runtime: 120
-  min_sum_counts: 1e2
+  min_sum_counts: 10
 
 
 # Color palletes 
@@ -242,3 +242,20 @@ dict_cstrip_val_color: {
       'Archaea':'#48bfe3',
   }
 }
+
+# Experiment plot parameters
+experiment_fold_change_plots:
+  spread_clust: 0.5
+  spread_ctrl: 2
+  bar_gap_frac: 0.25
+  xjit_bar_frac: 0.25
+  dotcolor: '#000000'
+  dotsize: 20
+  dotalpha: 1
+  barcolor: '#b9b9b9'
+  ft0: 6
+  ft1: 7
+  ft2: 8
+  pval_adj: 0.1
+  nd_shift: 0.001
+
