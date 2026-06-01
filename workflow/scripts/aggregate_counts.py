@@ -20,6 +20,7 @@ import click
 import duckdb
 import pandas as pd
 from tqdm import tqdm
+import re
 
 
 logging.basicConfig(
@@ -94,7 +95,7 @@ def read_counts_file(work: tuple[int, str]) -> pd.DataFrame:
     return df
 
 
-def agg(input: list[str], output, jobs: int=1):
+def agg(input: list[str], output, prefix, jobs: int=1):
     jobs = max(jobs, 1)
     # Assume all files have the same column of contig_name and contig_length,
     # only keep the contig_name and contig_length from the first file.
@@ -112,6 +113,14 @@ def agg(input: list[str], output, jobs: int=1):
         logging.info(f"Concatenating CSV file columns and writing to {output}")
         big_df = pd.concat(dfs, axis=1)
         logging.info(f"Final DataFrame shape = {big_df.shape}")
+        # add prefix to contig names if not already done
+        cnames = []
+        for cn in big_df['contig_name'].values:
+            match = re.search(r'^'+prefix, cn)
+            if match is None:
+                cn = f'{prefix}_{cn}'
+            cnames.append(cn)
+        big_df['contig_name'] = cnames
         count_cols = sorted([c for c in big_df.columns if c.startswith("count_")])
         big_df[["contig_name", "contig_length"] + count_cols].to_parquet(output, index=False)
         logging.info("Done")
@@ -119,10 +128,11 @@ def agg(input: list[str], output, jobs: int=1):
 
 @click.command()
 @click.option("--jobs", "-j", type=int, default=1, show_default=True, help="Number of CSV reader jobs")
+@click.option("--prefix", "-p", type=str, help="Prefix unique to make unique when merging assemblies.")
 @click.argument("input", nargs=-1)
 @click.argument("output", type=click.Path(exists=False))
-def main(jobs, input, output):
-    agg(input, output, jobs=jobs)
+def main(jobs, prefix, input, output):
+    agg(input, output, jobs=jobs, prefix=prefix)
 
 
 if __name__ == "__main__":

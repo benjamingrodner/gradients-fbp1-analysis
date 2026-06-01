@@ -1,44 +1,44 @@
 
-rule mask_env_alignment_by_db_clip_log:
-    input:
-        aln = fn_trim_clip,
-        log_file = fn_alignment_noenv_cliplog,
-    output:
-        masked = fn_env_aligned_mask
-    log:
-        "logs/mask_env_alignment_by_db_clip_log.log"
-    conda:
-        "../envs/python.yaml"
-    params:
-        script = config['dir_scripts'] + "/mask_alignment_from_clipkit_log.py"
-    shell:
-        "python {params.script} "
-        "--input {input.aln:q} "
-        "--log {input.log_file:q} "
-        "--output {output.masked} 2> {log}"
+# rule mask_env_alignment_by_db_clip_log:
+#     input:
+#         aln = fn_trim_clip,
+#         log_file = fn_alignment_noenv_cliplog,
+#     output:
+#         masked = fn_env_aligned_mask
+#     log:
+#         "logs/mask_env_alignment_by_db_clip_log.log"
+#     conda:
+#         "../envs/python.yaml"
+#     params:
+#         script = config['dir_scripts'] + "/mask_alignment_from_clipkit_log.py"
+#     shell:
+#         "python {params.script} "
+#         "--input {input.aln:q} "
+#         "--log {input.log_file:q} "
+#         "--output {output.masked} 2> {log}"
 
-rule deduplicate_env_mask_alignment:
-    input:
-        fasta = fn_env_aligned_mask
-    output:
-        fasta = fn_env_aligned_mask_dedup,
-        mapping = fn_env_aligned_mask_dedup_map
-    log:
-        err = "logs/deduplicate_env_mask_alignment.log"
-    conda:
-        "../envs/python.yaml"
-    resources:
-        mem_mb = config['deduplicate_alignment']['mem_mb']
-    params:
-        script = config['dir_scripts'] + "/deduplicate_alignment.py"
-    shell:
-        """
-        python {params.script:q} \
-            --input {input.fasta:q} \
-            --output {output.fasta:q} \
-            --map {output.mapping:q} \
-            2> {log.err:q}
-        """
+# rule deduplicate_env_mask_alignment:
+#     input:
+#         fasta = fn_env_aligned_mask
+#     output:
+#         fasta = fn_env_aligned_mask_dedup,
+#         mapping = fn_env_aligned_mask_dedup_map
+#     log:
+#         err = "logs/deduplicate_env_mask_alignment.log"
+#     conda:
+#         "../envs/python.yaml"
+#     resources:
+#         mem_mb = config['deduplicate_alignment']['mem_mb']
+#     params:
+#         script = config['dir_scripts'] + "/deduplicate_alignment.py"
+#     shell:
+#         """
+#         python {params.script:q} \
+#             --input {input.fasta:q} \
+#             --output {output.fasta:q} \
+#             --map {output.mapping:q} \
+#             2> {log.err:q}
+#         """
 
 rule filter_env_target_genes_to_place:
     input:
@@ -86,9 +86,11 @@ rule filter_env_alignment_very_short_long:
 rule place_env_on_tree:
     input:
         msa = fn_env_aligned_mask_dedup_tfilt_filt,
-        tree_done = fn_full_tree_done
+        tree_done = fn_full_tree_done,
+        # d = dir_raxml,
     output:
-        fn_place_env_tree_done
+        d = directory(dir_env_tree_raxml),
+        done = fn_place_env_tree_done,
     log:
         "logs/place_env_on_tree.log"
     benchmark:
@@ -102,12 +104,13 @@ rule place_env_on_tree:
         bn_out = bn_env_tree,
         w_out = dir_env_tree,
         bn_tree = bn_tree,
-        dir_tree = dir_tree,
+        dir_tree = dir_raxml,
     shell:
         """
         CWD=$( pwd )
-        DIR_OUT="$CWD"/{params.w_out:q}
-        FN_TREE={params.dir_tree:q}/RAxML_bestTree.{params.bn_tree:q}
+        DIR_OUT="$CWD"/{output.d:q}
+        mkdir -p "$DIR_OUT"
+        FN_TREE={input.d:q}/RAxML_bestTree.{params.bn_tree:q}
         raxmlHPC-PTHREADS-AVX \
             -f v \
             -w "$DIR_OUT" \
@@ -118,5 +121,5 @@ rule place_env_on_tree:
             -n {params.bn_out:q} \
             2> {log}
 
-        echo "Done" > {output:q}
+        echo "Done" > {output.done:q}
         """

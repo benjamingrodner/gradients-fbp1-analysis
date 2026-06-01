@@ -32,9 +32,38 @@ rule get_exp_assemblies:
         fi
         """
 
-rule translate_exp_assemblies:
+rule rename_exp_assemblies:
     input:
         fmt_exp_assembly,
+    output:
+        fmt_exp_assembly_rename,
+    log:
+        "logs/rename_exp_assemblies/{exp}.log"
+    conda:
+        "../envs/seqkit.yaml"
+    params:
+        prefix = lambda w: DICT_EXP[w.exp]['prefix'],
+        regex = lambda w: get_regex_seqname(w.exp)[0],
+        replace = lambda w: get_regex_seqname(w.exp)[1],
+    shell:
+        """
+        # Custom renaming with prefix for merging experiments
+        # Also regex sub if you need to match the faa names with the author counts table
+        # Also sub out illegal characters for RaxML
+        seqkit replace \
+            -p "{params.regex}" \
+            -r "{params.prefix}_{params.replace}" \
+            {input:q} \
+            | seqkit replace -p "[:,\)\(\[\]\']" -r "_" \
+            > {output:q} \
+            2> {log:q}
+        """
+
+
+
+rule translate_exp_assemblies:
+    input:
+        fmt_exp_assembly_rename,
     output:
         fmt_exp_assembly_6tr,
     log:
@@ -60,29 +89,11 @@ rule translate_exp_assemblies:
         fi
         """
 
-rule rename_exp_assemblies:
-    input:
-        fmt_exp_assembly_6tr,
-    output:
-        fmt_exp_assembly_6tr_rename,
-    log:
-        "logs/translate_exp_assemblies/{exp}.log"
-    conda:
-        "../envs/seqkit.yaml"
-    params:
-        prefix = lambda w: DICT_EXP[w.exp]['prefix']
-    shell:
-        """
-        seqkit replace -p "^" -r "{params.prefix}_" \
-            {input:q} > {output:q}
-        """
-
-
 
 rule hmmsearch_exp:
     input:
         fn_hmm = lambda w: config['dict_gene_hmmprofile'][w.gene],
-        fn_seqs = fmt_exp_assembly_6tr_rename,
+        fn_seqs = fmt_exp_assembly_6tr,
     output:
         fn_table_hmm = fmt_table_hmm_exp,
         fn_table_hmm_domain = fmt_table_hmm_domain_exp,

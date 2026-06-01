@@ -11,8 +11,9 @@ include: "rules/alignment.smk"
 include: "rules/build_tree.smk"
 include: "rules/cluster_env.smk"
 include: "rules/cluster_exp.smk"
-include: "rules/env_tree_placement.smk"
-include: "rules/exp_tree_placement.smk"
+# include: "rules/env_tree_placement.smk"
+# include: "rules/exp_tree_placement.smk"
+include: "rules/target_tree_placement.smk"
 include: "rules/annotate_tree.smk"
 include: "rules/experiment_downloads.smk"
 include: "rules/experiment_read_prep.smk"
@@ -21,11 +22,15 @@ include: "rules/deseq.smk"
 
 rule all:
     input:
-        fn_read_and_count_downloads_done,
-        fn_read_prep_done,
-        fn_quant_done,
+        # fn_full_tree_done,
+        # fn_extra_ml_and_bootstraps_done,
+        # fn_read_and_count_downloads_done,
+        # fn_read_prep_done,
+        # fn_quant_done,
         fn_deseq_done,
         # fn_place_exp_tree_done,
         # fn_place_env_tree_done,
+        # fn_place_target_tree_done,
+        # fn_target_pl_annot_done,
         # fn_fbp1_colorstrip,
         # fn_fbp1_colorstrip_exp,

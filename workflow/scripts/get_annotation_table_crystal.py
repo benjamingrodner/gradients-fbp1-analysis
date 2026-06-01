@@ -146,7 +146,7 @@ def process_files(input_files, taxon_lookup, df):
                     "Taxon": taxon_name,
                     "Gene": gene_name,
                     "Domain": domain,
-                    "Domain": substrate,
+                    "Substrate": substrate,
                     "Source": "Crystal structure"
                 })
         except Exception as e:

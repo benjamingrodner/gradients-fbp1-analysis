@@ -1,8 +1,9 @@
 
 rule get_nonenv_seqs_from_alignment:
     input: 
-        aln = fn_trim_clip_filt_dedup,
+        aln = fn_trim_clip_dedup,
         db = fn_db_rep_seqs,
+        outgroup = fn_outgroup_db_seqs_sub,
         crystal = expand(fmt_crystal_seqs, rcsb_id=config['rcsb_ids']),
         manual = glob.glob(config['dir_ref_man'] + '/*'),
     output:
@@ -13,7 +14,7 @@ rule get_nonenv_seqs_from_alignment:
         "../envs/seqkit.yaml"
     shell:
         """
-        seqkit seq -n -i {input.db:q} {input.crystal:q} {input.manual:q} \
+        seqkit seq -n -i {input.db:q} {input.crystal:q} {input.manual:q} {input.outgroup} \
             | seqkit grep -f - {input.aln:q} -o {output:q} \
             2> {log:q}
         """
@@ -39,11 +40,31 @@ rule remove_gappy_columns_noenv_alignment:
             2> {log:q}
         """
 
-        
+rule filter_alignment:
+    input:
+        fn_alignment_noenv_clip,
+    output:
+        fn_alignment_noenv_clip_filt,
+    log:
+        "logs/filter_alignment.log",
+    params:
+        frac_thresh = config['filter_alignment']['frac_thresh'],
+        script = config['dir_scripts'] + "/filter_alignment.py"
+    conda:
+        "../envs/python.yaml"
+    shell:
+        """
+        python {params.script:q} \
+            -i {input:q} \
+            -o {output:q} \
+            -f {params.frac_thresh:q} \
+            2> {log:q}
+        """
+   
 
 rule get_boostrap_resamples:
     input:
-        fn_alignment_noenv_clip,
+        fn_alignment_noenv_clip_filt,
     output:
         expand(
             fmt_bootstrap_resample, 
@@ -102,7 +123,7 @@ rule merge_fasttree_bootstraps:
 
 rule fasttree:
     input:
-        fn_alignment_noenv_clip,
+        fn_alignment_noenv_clip_filt,
     output:
         fn_fasttree,
     log:
@@ -144,7 +165,8 @@ rule roguenarok:
         boots = fn_bootstrap_fasttree_merged,
         exclude = fn_headers_crystal_manual,
     output:
-        fn_roguenarok,
+        fn = fn_roguenarok,
+        d = directory(dir_roguenarok),
     log:
         "logs/roguenarok.log"
     benchmark:
@@ -156,15 +178,14 @@ rule roguenarok:
         "../envs/roguenarok.yaml"
     params:
         bn = bn_tree,
-        w = dir_roguenarok,
     shell:
         """
-        mkdir -p {params.w:q}
+        mkdir -p {output.d:q}
         RogueNaRok \
             -i {input.boots:q} \
             -t {input.tree:q} \
             -n {params.bn:q} \
-            -w {params.w:q} \
+            -w {output.d:q} \
             -c 50 \
             -x {input.exclude:q} \
             2> {log:q}
@@ -192,9 +213,9 @@ rule pick_rogues_to_drop:
 rule drop_seqs_from_alignment:
     input:
         rogues = fn_rogues_to_drop,
-        aln = fn_alignment_noenv_clip
+        aln = fn_alignment_noenv_clip_filt,
     output:
-        fn_alignment_noenv_clip_drop,
+        fn_alignment_noenv_clip_filt_drop,
     conda:
         "../envs/seqkit.yaml"
     shell:
@@ -208,9 +229,10 @@ rule drop_seqs_from_alignment:
 
 rule full_tree_analysis:
     input:
-        fn_alignment_noenv_clip_drop,
+        fn_alignment_noenv_clip_filt_drop,
     output:
-        fn_full_tree_done,
+        f = fn_full_tree_done,
+        # d = directory(dir_raxml),
     log:
         "logs/full_tree_analysis.log"
     benchmark:
@@ -220,25 +242,85 @@ rule full_tree_analysis:
         runtime=config['build_tree']['runtime'],
     threads:
         config['build_tree']['threads'],
+    conda:
+        "../envs/raxml_ng.yaml"
     params:
+        d = dir_raxml,
         model = config['build_tree']['model'],
-        w = dir_tree,
         bn = bn_tree,
-        n_boot = config['build_tree']['n_bootstraps']
+        n_boot = lambda w: config['build_tree']['n_bootstraps'],
+        seed = config['build_tree']['seed'],
     shell:
         """
-        CWD=$( pwd )
-        DIR_TREE="$CWD"/{params.w:q}
-        raxmlHPC-PTHREADS-AVX \
-            -s {input:q} \
-            -w "$DIR_TREE" \
-            -m {params.model} \
-            -T {threads} \
-            -n {params.bn:q} \
-            -f a \
-            -x 42 \
-            -p 42 \
-            -# {params.n_boot} \
+        PREFIX={params.d:q}/{params.bn:q}
+        raxml-ng \
+            --all \
+            --msa {input:q} \
+            --model {params.model} \
+            --threads {threads} \
+            --workers auto \
+            --prefix "$PREFIX" \
+            --seed {params.seed} \
+            --bs-trees {params.n_boot}
             2> {log:q}
-        echo "Done" > {output:q}
+        echo "Done" > {output.f:q}
         """
+
+
+rule tree_extra_ml_and_bootstrapping:
+    input:
+        fn_alignment_noenv_clip_filt_drop,
+    output:
+        f = fn_extra_ml_and_bootstraps_done,
+        # d = directory(dir_raxml),
+    log:
+        "logs/tree_extra_ml_and_bootstrapping.log"
+    benchmark:
+        "benchmarks/tree_extra_ml_and_bootstrapping.benchmark.txt"
+    resources:
+        mem_mb=config['build_tree']['mem_mb'],
+        runtime=config['build_tree']['runtime'],
+    threads:
+        config['build_tree']['threads'],
+    conda:
+        "../envs/raxml_ng.yaml"
+    params:
+        d = dir_raxml,
+        model = config['build_tree']['model'],
+        bn = bn_extra_ml_and_bootstraps,
+        n_boot = lambda w: config['build_tree']['n_bootstraps_extra'],
+        trs = lambda w: config['build_tree']['n_trees_extra'],
+        seed = config['build_tree']['seed_extra'],
+    shell:
+        """
+        PREFIX={params.d:q}/{params.bn:q}
+        raxml-ng \
+            --all \
+            --msa {input:q} \
+            --model {params.model} \
+            --threads {threads} \
+            --workers auto \
+            --prefix "$PREFIX" \
+            --seed {params.seed} \
+            --tree {params.trs} \
+            --bs-trees {params.n_boot} \
+            --bs-metric fbp,tbe
+            2> {log:q}
+        echo "Done" > {output.f:q}
+        """
+        # """
+        # CWD=$( pwd )
+        # DIR_TREE="$CWD"/{output.d:q}
+        # raxmlHPC-PTHREADS-AVX \
+        #     -s {input:q} \
+        #     -w "$DIR_TREE" \
+        #     -m {params.model} \
+        #     -T {threads} \
+        #     -n {params.bn:q} \
+        #     -f a \
+        #     -x 42 \
+        #     -p 42 \
+        #     -# {params.n_boot} \
+        #     2> {log:q}
+        # echo "Done" > {output.f:q}
+        # """

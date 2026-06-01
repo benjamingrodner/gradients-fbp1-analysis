@@ -143,7 +143,7 @@ def process_files(input_files, fmt, taxon_lookup, dict_exp_info, dict_gene_subst
                     "Taxon": taxon_name,
                     "Gene": gene,
                     "Domain": domain,
-                    "Domain": substrate,
+                    "Substrate": substrate,
                     "Source": "Experiment"
                 })
         except Exception as e:

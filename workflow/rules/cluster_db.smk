@@ -2,7 +2,7 @@ import os
 
 rule get_db_seqs_to_cluster:
     input:
-        fn_hmm_hitnames_all = fn_hmm_hitnames_all,
+        fn_hmm_hitnames_all = get_fns_hmm_hitnames_target,
         fn_db_seqs = config['path_database'],
     output:
         fn_db_seqs_to_cluster,
@@ -16,7 +16,7 @@ rule get_db_seqs_to_cluster:
     shell:
         """
         seqkit grep -j {threads} \
-            -f {input.fn_hmm_hitnames_all:q} \
+            -f <(cat {input.fn_hmm_hitnames_all:q}) \
             {input.fn_db_seqs:q} \
             > {output:q} \
             2> {log:q}

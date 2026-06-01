@@ -16,15 +16,16 @@ conda activate snakemake_host
 
 snakemake \
     --snakefile workflow/Snakefile \
-    --configfile config/config.yaml \
-    --jobs 16 \
+    --configfile config/config_big_tree.yaml \
+    --jobs 32 \
     --use-conda \
     --printshellcmds \
     --rerun-incomplete \
     --rerun-triggers mtime \
-    -R plot_exp_foldchange \
+    -R fn_db_crystal_seqs \
     -n \
     -- \
+    # -R merge_counts_fromauthor_and_downloaded merge_salmon_counts rename_exp_assemblies \
 
     # --resources cores=8 \
     # --executor slurm \

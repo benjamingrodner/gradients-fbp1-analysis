@@ -34,14 +34,49 @@ rule subset_db_clusts:
         seqkit sample -p {params.pct} {input:q} > {output:q}
         """
 
+rule get_outgroup_db_seqs:
+    input:
+        fns_hitnames = get_fns_hmm_hitnames_nontarget,
+        fn_db_seqs = config['path_database'],
+    output:
+        fn_outgroup_db_seqs,
+    log:
+        "logs/get_outgroup_db_seqs.log"
+    benchmark:
+        "benchmarks/get_outgroup_db_seqs.benchmark.txt"
+    threads: 4
+    conda:
+        "../envs/seqkit.yaml"
+    shell:
+        """
+        seqkit grep -j {threads} \
+            -f <(cat {input.fns_hitnames:q}) \
+            {input.fn_db_seqs:q} \
+            > {output:q} \
+            2> {log:q}
+        """
+    
+rule subset_outgroup_db_seqs:
+    input:
+        fn_outgroup_db_seqs,
+    output:
+        fn_outgroup_db_seqs_sub,
+    params:
+        num = config['subset_db_outgroups']['number'],
+    conda:
+        "../envs/seqkit.yaml"
+    shell:
+        """
+        seqkit sample -n {params.num} {input:q} > {output:q}
+        """
 
 
-
-rule merge_clusters_with_crystal_struct_seqs:
+rule merge_seqs_to_align:
     input:
         fn_db_rep_seqs_sub,
-        get_env_rep_seqs,
-        get_exp_rep_seqs,
+        fn_outgroup_db_seqs_sub,
+        get_fn_env_seqs_clust_target,
+        get_fn_exp_seqs_clust_target,
         expand(fmt_crystal_seqs, rcsb_id=config['rcsb_ids']),
         glob.glob(config['dir_ref_man'] + '/*'),
     output: 
@@ -51,10 +86,30 @@ rule merge_clusters_with_crystal_struct_seqs:
         cat {input:q} > {output:q}
         """ 
 
+rule deduplicate_seqs_to_align:
+    input:
+        fasta = fn_db_crystal_seqs,
+    output:
+        fasta = fn_db_crystal_seqs_dedup,
+        dropped = fn_db_crystal_seqs_dedup_removed,
+    log:
+        err = "logs/deduplicate_seqs_to_align.log"
+    conda:
+        "../envs/seqkit.yaml"
+    shell:
+        """
+        seqkit rmdup --by-seq --ignore-case \
+            -d {output.dropped:q} \
+            {input.fasta:q} \
+            -o {output.fasta:q} \
+            2> {log.err:q}
+        """
+
+
 
 rule alignment:
     input:
-        fn_db_crystal_seqs,
+        fn_db_crystal_seqs_dedup,
     output:
         fn_alignment,
     log:
@@ -146,33 +201,33 @@ rule trim_alignment_gappy_columns:
             2> {log:q}
         """
 
-rule filter_alignment:
-    input:
-        fn_trim_clip,
-    output:
-        fn_trim_clip_filt,
-    log:
-        "logs/filter_alignment.log",
-    params:
-        frac_thresh = config['filter_alignment']['frac_thresh'],
-        script = config['dir_scripts'] + "/filter_alignment.py"
-    conda:
-        "../envs/python.yaml"
-    shell:
-        """
-        python {params.script:q} \
-            -i {input:q} \
-            -o {output:q} \
-            -f {params.frac_thresh:q} \
-            2> {log:q}
-        """
+# rule filter_alignment:
+#     input:
+#         fn_trim_clip,
+#     output:
+#         fn_trim_clip_filt,
+#     log:
+#         "logs/filter_alignment.log",
+#     params:
+#         frac_thresh = config['filter_alignment']['frac_thresh'],
+#         script = config['dir_scripts'] + "/filter_alignment.py"
+#     conda:
+#         "../envs/python.yaml"
+#     shell:
+#         """
+#         python {params.script:q} \
+#             -i {input:q} \
+#             -o {output:q} \
+#             -f {params.frac_thresh:q} \
+#             2> {log:q}
+#         """
 
 rule deduplicate_alignment:
     input:
-        fasta = fn_trim_clip_filt
+        fasta = fn_trim_clip,
     output:
-        fasta = fn_trim_clip_filt_dedup,
-        mapping = fn_trim_clip_filt_dedup_map
+        fasta = fn_trim_clip_dedup,
+        mapping = fn_trim_clip_dedup_map
     log:
         err = "logs/deduplicate_alignment.log"
     conda:

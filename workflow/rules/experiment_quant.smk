@@ -79,9 +79,14 @@ rule merge_salmon_counts:
         "../envs/python.yaml"
     params:
         script=config['dir_scripts'] + "/aggregate_counts.py",
+        prefix = lambda w: DICT_EXP[w.exp_quant]['prefix'],
     shell:
         """
-        python3 {params.script:q} --jobs {threads} {input.fns:q} {output:q} 2> {log:q}
+        python3 {params.script:q} \
+            --jobs {threads} \
+            --prefix {params.prefix} \
+            {input.fns:q} {output:q} \
+            2> {log:q}
         """
 
 # rule salmon_quant_done:
@@ -109,11 +114,23 @@ rule merge_counts_fromauthor_and_downloaded:
         "../envs/python.yaml"
     params:
         script = lambda w: get_script_merge_counts_auth(w.exp_auth),
+        colname_contigs = lambda w: get_colname_merge_counts_auth(w.exp_auth),
         glob_counts = lambda w: get_glob_counts_auth(w.exp_auth),
+        prefix = lambda w: DICT_EXP[w.exp_auth]['prefix'],
     shell:
         """
+        ARG_C="-c {params.colname_contigs}"
+        if [[ -z "{params.colname_contigs}" ]]; then
+            ARG_C=""
+        fi
         FNS=$( ls {params.glob_counts} )
-        python3 {params.script} -j {threads} $FNS {output:q} 2> {log:q}
+        python3 {params.script} \
+            -j {threads} \
+            -p {params.prefix} \
+            $ARG_C \
+            $FNS \
+            {output:q} \
+            2> {log:q}
         """
 
 rule quant_done:

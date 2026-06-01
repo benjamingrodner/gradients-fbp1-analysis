@@ -28,7 +28,7 @@ checkpoint group_exp_hitnames:
 rule get_exp_seqs_to_cluster:
     input:
         fn_hitnames = fmt_exp_hitnames_grouped_gene,
-        fn_seqs = fmt_exp_assembly_6tr_rename,
+        fn_seqs = fmt_exp_assembly_6tr,
     output:
         fmt_exp_seqs_to_cluster,
     log:
@@ -81,3 +81,42 @@ rule cluster_exp_hitseqs:
             --cov-mode {params.cov_mode} \
             2> {log:q}
         """
+
+# rule merge_exp_clusters:
+#     input:
+#         get_exp_rep_seqs,
+#     output:
+#         fn_exp_seqs_clust_cat,
+#     shell:
+#         """
+#         cat {input:q} > {output:q}
+#         """
+    
+rule merge_exp_clusters_target:
+    input:
+        aggregate_exp_rep_seqs_target,
+    output:
+        fn_exp_seqs_clust_target,
+    shell:
+        """
+        cat {input:q} > {output:q}
+        """
+
+rule manual_subset_exp_cluster:
+    input:
+        fn_exp_seqs_clust_target,
+    output:
+        fn_exp_seqs_clust_target_sub,
+    log:
+        "logs/manual_subset_exp_cluster.log"
+    benchmark:
+        "benchmarks/manual_subset_exp_cluster.benchmark.txt"
+    conda:
+        "../envs/seqkit.yaml"
+    params:
+        fn_sub = config['fn_manual_subset_clusters'],
+    shell:
+        """
+        seqkit grep -f {params.fn_sub:q} {input:q} -o {output:q}
+        """
+

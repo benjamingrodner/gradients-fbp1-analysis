@@ -61,11 +61,6 @@ ttaxnames:
   - Dinophyceae
   - Pelagomonas
 
-outgroup_genes: [
-  btuF, desE, hmuT, fecB, btuF2, mtsA, yclQ, fhuD, fhuD2, htsA, znuA, 
-  znuA2, psaA, mtnC, mtnC2
-]
-
 fn_manual_subset_clusters:   # Text file with list of cluster names to keep blank or null if you don't want to subset
 
 target_genes_for_env_placement:
@@ -115,11 +110,7 @@ rcsb_ids:
   - 2PS0 
   - 2PS3
   - 2PS9
-  # - 1ESZ
-  # - 1K2V
-  # - 1K7S
-  # - 3BE5
-  # - 3BE6
+
 
 # Resources for rules
 get_fasta_from_parquet:
@@ -142,10 +133,7 @@ cluster_db_seqs:
   runtime: 60
 
 subset_db_clusts:
-  pct: "100"  # in percentage points so to subset 10% give "10"
-
-subset_db_outgroups:
-  number: 100  # Number of seqs to use in total from outgroup genes
+  pct: "10"  # in percentage points so to subset 10% give "10"
 
 alignment:
   threads: 16
@@ -160,8 +148,8 @@ trim_alignment_gappy_columns:
   runtime: 30
 
 filter_alignment:
-  frac_thresh: 0.25  # sequence must be at least this fraction of the mean long to be kept for backbone tree construction
-  frac_thresh_short: 0.1  # same for env/exp tree placement
+  frac_thresh: 0.5
+  frac_thresh_short_long: 0.9
   threads: 8
   mem_mb: 10000
   runtime: 30
@@ -213,21 +201,11 @@ roguenarok:
   frac_of_improvement_to_use: 0.9  # If removing all of the rogues gives improvement of 1, what fraction of that improvement do you want. Default mode "elbow" finds the elbow of the curve (where diminishing returns start).
 
 build_tree:
-  threads: 60
+  threads: 16
   mem_mb: 10000
   runtime: 2800
-  seed: 42
-  model: LG+G+FC
-  model_old: PROTGAMMALGF
-  n_bootstraps: "autoMRE{100}"  # For automatic number of bootstraps use autoMR/autoMRE/autoMRE_IGN
-  n_bootstraps_extra: "autoMRE"
-  n_trees_extra: "pars{50},rand{50}"
-  seed_extra: 69
-
-tree_placement:
-  threads: 2
-  mem_mb: 100000
-  runtime: 480
+  model: PROTGAMMALGF
+  n_bootstraps: 100  # For automatic number of bootstraps use autoMR/autoMRE/autoMRE_IGN
 
 get_bioproject_reads:
   threads: 8
@@ -303,26 +281,7 @@ dict_cstrip_val_color: {
       'Eukaryota':'#6930c3',
       'Bacteria':'#80ffdb',
       'Archaea':'#48bfe3',
-  },
-  'Source_symbol':{
-    'Crystal structure':['#002039',4,5,1] # color, symbol, size, position
-  },
-  'Bootstrap':{
-    color: '#444444',
-    symbol: 2,
-    size: 20,
-    position: 1,
-    min_thresh: 0.8,
-  },
-  'Color_branch':{
-    'Source': {'Environmental metatranscriptome':'#b22222',},
-    'Domain': {
-      'Eukaryota':'#000000',
-      'Bacteria':'#000000',
-      'Archaea':'#000000',
-    },
-  },
-  'fbp1_symbol': ['Phatr3_J46929.p1', '#b22222',4,5,1],
+  }
 }
 
 # Experiment plot parameters
@@ -332,7 +291,7 @@ experiment_fold_change_plots:
   bar_width: 0.75
   xjit_bar_frac: 0.25
   dotcolor: '#000000'
-  dotsize: 2
+  dotsize: 6
   dotalpha: 1
   barcolor: '#b9b9b9'
   ft0: 6

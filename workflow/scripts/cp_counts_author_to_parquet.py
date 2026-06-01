@@ -23,6 +23,8 @@ logging.basicConfig(
 def convert_csv_to_parquet(
     input_file_path: str | Path, 
     output_parquet_path: str | Path,
+    coln: str | None,
+    prefix: str | None,
     threads: int | None = None,
 ) -> None:
     """Loads a CSV or TSV file using Ibis/DuckDB and writes it to a Parquet file.
@@ -39,16 +41,29 @@ def convert_csv_to_parquet(
     # DuckDB's read_csv auto-detects delimiters (like ',' and '\t') by default.
     table = con.read_csv(input_file_path)
 
+    # substitute the old column name for the standard one
+    # and replace illegal characters for RaxML to match the .faa file
+    # and add prefix to match the .faa  and fasta files
+    table = table.mutate(
+        contig_name=table[coln].re_replace(
+            r"[:,\)\(\[\]\']", "_"
+        ).re_replace(
+            r"^", f"{prefix}_"
+        )
+    )
+
     # 3. Write the table expression directly to Parquet
     # Ibis executes this efficiently out-of-core via DuckDB
     table.to_parquet(output_parquet_path)
 
 @click.command()
 @click.option("--jobs", "-j", type=int, default=1, show_default=True, help="Number of CSV reader jobs")
+@click.option("--colname_contigs", "-c", type=str, help="Column name of the contig names")
+@click.option("--prefix", "-p", type=str, help="Prefix for matching with assembly headers")
 @click.argument("input")
 @click.argument("output", type=click.Path(exists=False))
-def main(jobs, input, output):
-    convert_csv_to_parquet(input, output, threads=jobs)
+def main(jobs, colname_contigs, prefix, input, output):
+    convert_csv_to_parquet(input, output, threads=jobs, coln=colname_contigs, prefix=prefix)
 
 
 if __name__ == "__main__":

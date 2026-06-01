@@ -75,7 +75,7 @@ rule get_env_hitseqs:
     shell:
         """
         python {params.script:q} \
-            -hc contig_name \
+            -hc contig_name_6tr \
             -hf {input.fn_env_hitnames:q} \
             -i {input.fn_seqs_parquet:q} \
             -o {output:q} \
@@ -139,14 +139,41 @@ rule cluster_env_hitseqs:
         """
 
 
-rule merge_env_clusters:
+# rule merge_env_clusters:
+#     input:
+#         aggregate_env_clusters,
+#     output:
+#         fn_env_seqs_clust_cat,
+#     shell:
+#         """
+#         cat {input:q} > {output:q}
+#         """
+
+rule merge_env_clusters_target:
     input:
-        aggregate_env_clusters,
+        aggregate_env_clusters_target,
     output:
-        fn_env_seqs_clust_cat,
+        fn_env_seqs_clust_target,
     shell:
         """
         cat {input:q} > {output:q}
         """
+
     
-    
+rule manual_subset_env_cluster:
+    input:
+        aggregate_env_clusters_target,
+    output:
+        fn_env_seqs_clust_target_sub,
+    log:
+        "logs/manual_subset_env_cluster.log"
+    benchmark:
+        "benchmarks/manual_subset_env_cluster.benchmark.txt"
+    conda:
+        "../envs/seqkit.yaml"
+    params:
+        fn_sub = config['fn_manual_subset_clusters'],
+    shell:
+        """
+        seqkit grep -f {params.fn_sub:q} {input:q} -o {output:q}
+        """

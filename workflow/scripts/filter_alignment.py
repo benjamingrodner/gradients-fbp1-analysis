@@ -55,9 +55,11 @@ def main():
         slen = len(s) - ngaps
         lens.append(slen)
     len_mean = np.mean(lens)
-    t_low = len_mean - (len_mean*args.frac_range)
-    t_high = len_mean + (len_mean*args.frac_range)
-    print(t_low, len_mean, t_high)
+    t_low = len_mean*args.frac_range
+    # t_low = len_mean - (len_mean*args.frac_range)
+    # t_high = len_mean + (len_mean*args.frac_range)
+    print(t_low, len_mean)
+    # print(t_low, len_mean, t_high)
 
     dict_out = {}
     outsides = []
@@ -65,9 +67,10 @@ def main():
         ngaps = s.count('-')
         slen = len(s) - ngaps
         bool_l = slen < t_low
-        bool_h = slen > t_high
+        # bool_h = slen > t_high
         # print(slen, bool_l, bool_h)
-        if bool_l | bool_h:
+        # if bool_l | bool_h:
+        if bool_l:
             outsides.append(h)
         else:
             dict_out[h] = s

@@ -11,7 +11,8 @@ amphora-graff_van_creveld_et_al_2023:
     deseq_ctrl_tests:
         'Ac Control': ['Ac Hydrogren peroxide','Ac Iron limitation',]
     plot_deseq: 
-        figsize: [1.5,1.5]
+        figsize: [1,0.45]
+        stacked_cmap: 'winter'
 chaetoceros-graff_van_creveld_et_al_2023:
     prefix: chasp_gvc
     taxname: "Chaetoceros sp. CCMP199"
@@ -53,7 +54,8 @@ t_oceanica-graff_van_creveld_et_al_2023:
     deseq_ctrl_tests:
         'To Control': ['To Hydrogren peroxide','To Iron limitation',]
     plot_deseq: 
-        figsize: [1.5,3]
+        figsize: [3,0.45]
+        stacked_cmap: 'autumn'
 t_pseudonana-graff_van_creveld_et_al_2023:
     prefix: thapse_gvc
     taxname: "Thalassiosira pseudonana CCMP1335"
@@ -81,9 +83,11 @@ phatr_timeseries-smith_et_al_2016:
     deseq_ctrl_tests:
         HighFe: ['MedFe','LowFe']
     plot_deseq: 
-        figsize: [1.5,10]
+        figsize: [1,0.45]
+        stacked_cmap: 'spring'
 p_antarctica-rizkallah_et_al_2020:
     prefix: phaant_riz
+    regex_replace_seqname: ['.*(TR\d+:[^ ]+).*','\$1']
     taxname: "Phaeocystis antarctica"
     method_assembly: download
     link_assembly: "https://sra-download.ncbi.nlm.nih.gov/traces/wgs03/wgs_aux/GF/UQ/GFUQ01/GFUQ01.1.fsa_nt.gz"
@@ -92,6 +96,7 @@ p_antarctica-rizkallah_et_al_2020:
     bioproject: PRJNA395466
     colname_contigs: column00
     colnames_metadata: ['condition']
+    re_subs_fasta2counts: [['_i\d+$','']]
     sample_metadata:
         Pant_0h_rep1: 0h
         Pant_0h_rep2: 0h
@@ -111,7 +116,9 @@ p_antarctica-rizkallah_et_al_2020:
     deseq_ctrl_tests:
         0h: ['14h','24h','72h']
     plot_deseq: 
-        figsize: [1.5,15]
+        figsize: [3,0.6]
+        stacked_cmap: 'summer'
+
 c_closterium_uga4-quirk_sunda_cohen_2025:
     prefix: cylclo4_qui
     taxname: "Cylindrotheca closterium"
@@ -206,7 +213,8 @@ g_oceanica_uga13-quirk_sunda_cohen_2025:
         high_Fe: ['low_Fe']
         add_back: ['low_Fe']
     plot_deseq: 
-        figsize: [1.5,1]
+        figsize: [1,0.3]
+        stacked_cmap: 'cool'
 phatr_starvation-villar_et_al_2025:
     prefix: phatri_vil
     taxname: "Phaeodactylum tricornutum"
@@ -227,7 +235,8 @@ phatr_starvation-villar_et_al_2025:
         FeHA1: ['3D-HA1','7D-HA1','2W-HA1']
         FeHA2: ['3D-HA2','7D-HA2','2W-HA2']
     plot_deseq: 
-        figsize: [1.5,2]
+        figsize: [1,0.6]
+        stacked_cmap: 'spring'
 micromonas-meyer_et_al_2025:
     prefix: mic_mey
     taxname: "uncultured Bathycoccus"
@@ -247,26 +256,27 @@ micromonas-meyer_et_al_2025:
     deseq_ctrl_tests:
         'replete': ['deplete']
     plot_deseq: 
-        figsize: [1.5,1]
-p_granii-cohen_et_al_2018:
-    prefix: psegra_coh
-    taxname: "Pseudo-nitzschia granii"
-    method_assembly: download
-    link_assembly: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/Trinity.fasta"
-    method_counts: download
-    link_counts: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/query_KO_bowtiecounts.tab"
-    colname_contigs: query
-    colnames_metadata: ['condition']
-    sample_metadata:
-        L1: low_Fe
-        L2: low_Fe
-        H1: high_Fe
-        H2: high_Fe
-        H3: high_Fe
-    deseq_ctrl_tests:
-        'high_Fe': ['low_Fe']
-    plot_deseq: 
-        figsize: [1.5,6]
+        figsize: [1,0.3]
+        stacked_cmap: 'Wistia'
+# p_granii-cohen_et_al_2018:
+#     prefix: psegra_coh
+#     taxname: "Pseudo-nitzschia granii"
+#     method_assembly: download
+#     link_assembly: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/Trinity.fasta"
+#     method_counts: download
+#     link_counts: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/query_KO_bowtiecounts.tab"
+#     colname_contigs: query
+#     colnames_metadata: ['condition']
+#     sample_metadata:
+#         L1: low_Fe
+#         L2: low_Fe
+#         H1: high_Fe
+#         H2: high_Fe
+#         H3: high_Fe
+#     deseq_ctrl_tests:
+#         'high_Fe': ['low_Fe']
+#     plot_deseq: 
+#         figsize: [1.5,6]
 # chlorella-mansfeldt_et_al_2016:
 #     prefix: chl_man
 #     taxname: "Chlorella sp. SAG 211-18"

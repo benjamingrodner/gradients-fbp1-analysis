@@ -48,6 +48,14 @@ def get_script_merge_counts_auth(exp):
         fn = "workflow/scripts/cp_counts_author_to_parquet.py"
     return fn
 
+def get_colname_merge_counts_auth(exp):
+    fn = DICT_EXP[exp].get('script_merge_counts')
+    colname = ""
+    if fn is None:
+        colname = DICT_EXP[exp]['colname_contigs']
+    return colname
+
+
 def get_glob_counts_auth(exp):
     fn = DICT_EXP[exp].get('glob_counts')
     if fn is None:
@@ -184,7 +192,28 @@ def get_exp_assm_fn_or_link(exp):
     else:
         raise ValueError(f"Method {method} is not available for getting the experiment assembly")
 
-def get_exp_rep_seqs(wildcards):
+def get_fn_exp_seqs_clust_target(wildcards):
+    fn_sub = config['fn_manual_subset_clusters']
+    fn = fn_exp_seqs_clust_target
+    if fn_sub is not None:
+        fn = fn_exp_seqs_clust_target_sub
+    return fn
+
+
+
+# def get_exp_rep_seqs(wildcards):
+#     fns = []
+#     for exp in DICT_EXP.keys():
+#         d = checkpoints.group_exp_hitnames.get(
+#             exp=exp
+#         ).output[0]
+#         for f in os.listdir(d):
+#             if f.startswith(best_hit_prefix):
+#                 gene = f.replace(best_hit_prefix, "").replace(best_hit_ext,"")
+#                 fn = fmt_exp_rep_seqs.format(exp=exp, gene=gene)
+#                 fns.append(fn)
+#     return fns
+def aggregate_exp_rep_seqs_target(wildcards):
     fns = []
     for exp in DICT_EXP.keys():
         d = checkpoints.group_exp_hitnames.get(
@@ -193,8 +222,9 @@ def get_exp_rep_seqs(wildcards):
         for f in os.listdir(d):
             if f.startswith(best_hit_prefix):
                 gene = f.replace(best_hit_prefix, "").replace(best_hit_ext,"")
-                fn = fmt_exp_rep_seqs.format(exp=exp, gene=gene)
-                fns.append(fn)
+                if gene in TGENES:
+                    fn = fmt_exp_rep_seqs.format(exp=exp, gene=gene)
+                    fns.append(fn)
     return fns
 
 def get_exp_clusters(exp):
@@ -208,6 +238,14 @@ def get_exp_clusters(exp):
             fn = fmt_exp_clusters.format(exp=exp, gene=gene)
             fns.append(fn)
     return fns
+
+def get_fn_env_seqs_clust_target(wildcards):
+    fn_sub = config['fn_manual_subset_clusters']
+    fn = fn_env_seqs_clust_target
+    if fn_sub is not None:
+        fn = fn_env_seqs_clust_target_sub
+    return fn
+
 
 def get_env_rep_seqs(wildcards):
     return glob.glob(
@@ -238,6 +276,12 @@ def get_target_env_rep_seqs(wildcards):
             out.append(fn)
     return out
 
+def get_regex_seqname(exp):
+    r = DICT_EXP[exp].get('regex_replace_seqname')
+    if r is None:
+        r = ['^','']
+    return r
+
 def get_fns_seqs_to_search(wildcards):
     fns = [fmt_seqs_fasta.format(batch=b) for b in config['batches']]
     fns += glob.glob(config['dirs_data']['isolates'] + '/*')
@@ -267,8 +311,50 @@ def aggregate_env_clusters(wildcards):
         for cid in chunk_ids
     ]
     return out
+
+def aggregate_env_clusters_target(wildcards):
+    chunk_ids = []
+    for batch in BATCHES:
+        # 1. Access the checkpoint output
+        checkpoint_output = checkpoints.group_env_hitnames.get(
+            batch=batch
+        ).output[0]
+        # 2. Get filenames and strip extensions/prefixes
+        # Suppose files are: chunk_aa.txt, chunk_ab.txt
+        # We want chunk_id to be just: aa, ab
+        for f in os.listdir(checkpoint_output):
+            if f.startswith(tg_prefix):
+                # Remove 'chunk_' prefix and '.txt' suffix
+                cid = f.replace(tg_prefix, "").replace(ext_env_hitnames, "")
+                chunk_ids.append(cid)
+    # Get unique since in checkpoint we get taxgene repeats from multiple batches, but later we merged batches
+    chunk_ids = list(set(chunk_ids))
+    # 3. Reconstruct the paths for the next rule
+    out = []
+    for cid in chunk_ids:
+        if any([gene in cid for gene in TGENES]):
+            out.append(fmt_clustered_env_hitseqs.format(taxgene=cid))
+    return out
+
+def get_fns_hmm_hitnames_nontarget(wildcards):
+    fns = []
+    for gene in OGENES:
+        fns.append(fmt_hmm_hitnames.format(gene=gene))
+    return fns
+
+def get_fns_hmm_hitnames_target(wildcards):
+    fns = []
+    for gene in TGENES:
+        fns.append(fmt_hmm_hitnames.format(gene=gene))
+    return fns
+
 # Global 
 GENES = list(config['dict_gene_hmmprofile'].keys())
+TGENES = list(set(
+    config['target_genes_for_exp_placement'] 
+    + config['target_genes_for_env_placement']
+))
+OGENES = config['outgroup_genes']
 BATCHES = list(config['batches'])
 with open(config['fn_experiment_info'], 'r') as f:
     DICT_EXP = yaml.safe_load(f)
@@ -292,24 +378,50 @@ fmt_table_hmm_domain = bn_hmmsearch + ".domain"
 fmt_stdout_hmm = bn_hmmsearch + ".stdout"
 fmt_hmm_hitnames = bn_hmmsearch + ".names"
 bn_hmm_genes = ''
-for gene in config['dict_gene_hmmprofile'].keys():
+for gene in GENES:
     bn_hmm_genes += f'{gene}_'
 bn_hmm_genes = bn_hmm_genes.rstrip('_')
+
+bn_hmm_target = ''
+for gene in TGENES:
+    bn_hmm_target += f'{gene}_'
+bn_hmm_target = bn_hmm_target.rstrip('_')
+
+bn_hmm_outgroup = ''
+for gene in OGENES:
+    bn_hmm_outgroup += f'{gene}_'
+bn_hmm_outgroup = bn_hmm_outgroup.rstrip('_')
 
 fn_hmm_hitnames_all = (
     dir_hmmsearch + f"/{bn_hmm_genes}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
     + '_all.names'
 )
 fn_hmms_best_hit = dir_hmmsearch + f'/{bn_hmm_genes}_hmms_best_hit.tsv'
+fn_hmm_hitnames_target = (
+    dir_hmmsearch + f"/{bn_hmm_target}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
+    + '_all.names'
+)
+fn_hmm_hitnames_outgroup = (
+    dir_hmmsearch + f"/{bn_hmm_outgroup}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
+    + '_all.names'
+)
+fn_outgroup_db_seqs = (
+    dir_hmmsearch + f"/{bn_hmm_outgroup}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
+    + '_db.faa'
+)
+fn_outgroup_db_seqs_sub = (
+    dir_hmmsearch + f"/{bn_hmm_outgroup}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
+    + f"_db_subn{config['subset_db_outgroups']['number']}.faa"
+)
 
 # Cluster db
 dir_clust_db = config['dir_out'] + '/cluster/db'
-fn_db_seqs_to_cluster = f'{dir_clust_db}/{bn_hmm_genes}_hmmhitseqs.fasta'
+fn_db_seqs_to_cluster = f'{dir_clust_db}/{bn_hmm_target}_hmmhitseqs.fasta'
 ident = re.sub('0.','',str(config['cluster_db_seqs']['min_seq_id']))
 cov = re.sub('0.','',str(config['cluster_db_seqs']['coverage']))
 mode = config['cluster_db_seqs']['cov_mode']
 bn_clust = f'mmseqs2_i{ident}_c{cov}_mode{mode}'
-dir_clust_db_genes = f'{dir_clust_db}/{bn_hmm_genes}_{bn_clust}'
+dir_clust_db_genes = f'{dir_clust_db}/{bn_hmm_target}_{bn_clust}'
 fn_db_rep_seqs = f'{dir_clust_db_genes}/db_clust_rep_seq.fasta'
 fn_db_clusters = f'{dir_clust_db_genes}/db_clust_cluster.tsv'
 sub = config['subset_db_clusts']['pct']
@@ -348,15 +460,18 @@ fmt_clustered_env_hitseqs = (
     dir_env_clust + '/' + bn_env_clust + '/taxgene_groups/{taxgene}/' 
     + tg_prefix + '{taxgene}_rep_seq.fasta'
 )
-fn_env_seqs_clust_cat = (
-    f'{dir_env_clust}/{bn_env_clust}/{bn_hmm_genes}_env_seqs_clust_cat.faa'
+fn_env_seqs_clust_target = (
+    f'{dir_env_clust}/{bn_env_clust}/{bn_hmm_target}_env_seqs_clust_cat.faa'
+)
+fn_env_seqs_clust_target_sub = (
+    f'{dir_env_clust}/{bn_env_clust}/{bn_hmm_target}_env_seqs_clust_cat-manual_sub.faa'
 )
 
 # Experiment downloads
 dir_exp_data = config['dirs_data']['experiments']
-fmt_exp_assembly = dir_exp_data + '/{exp}/assembly.fasta'
+fmt_exp_assembly = dir_exp_data + '/{exp}/assembly_og.fasta'
+fmt_exp_assembly_rename = dir_exp_data + '/{exp}/assembly_rename.fasta'
 fmt_exp_assembly_6tr = dir_exp_data + '/{exp}/assembly.faa'
-fmt_exp_assembly_6tr_rename = dir_exp_data + '/{exp}/assembly_exp_prefix.faa'
 # fn_download_assemblies_done = dir_exp_data + '/fns_downloaded.txt'
 
 # Hmmsearch experiments
@@ -388,15 +503,25 @@ dir_exp_clust = dir_exp + '/{exp}/cluster/' + bn_exp_clust + '/{gene}'
 fmt_exp_seqs_to_cluster = f'{dir_exp_clust}/seqs_to_cluster.fasta'
 fmt_exp_rep_seqs = f'{dir_exp_clust}/exp_clust_rep_seq.fasta'
 fmt_exp_clusters = f'{dir_exp_clust}/exp_clust_cluster.tsv'
+fn_exp_seqs_clust_target = (
+    f'{dir_exp}/merge_clusters/{bn_exp_clust}'
+    + f'/{bn_hmm_target}_all_exp_clust_rep_seqs.fasta'
+)
+fn_exp_seqs_clust_target_sub = (
+    f'{dir_exp}/merge_clusters/{bn_exp_clust}'
+    + f'/{bn_hmm_target}_all_exp_clust_rep_seqs-manual_sub.fasta'
+)
 
 
 # Alignment
 dir_aln = (
     config['dir_out'] 
-    + f'/alignment/genes_{bn_hmm_genes}-db_{bn_clust_sub}-env_{bn_env_clust}'
+    + f'/alignment/target_{bn_hmm_target}-db_{bn_clust_sub}-env_{bn_env_clust}-outgroup_{bn_hmm_outgroup}'
     )
 fmt_crystal_seqs = config['dir_rcsb'] + '/{rcsb_id}.fasta'
 fn_db_crystal_seqs = dir_aln + '/db-env-exp-crystal-manual.fasta'
+fn_db_crystal_seqs_dedup = dir_aln + '/db-env-exp-crystal-manual.dedup.fasta'
+fn_db_crystal_seqs_dedup_removed = dir_aln + '/db-env-exp-crystal-manual.removed.fasta'
 fn_alignment = re.sub('.fasta','.aln',fn_db_crystal_seqs)
 fn_trim_crystal = fn_alignment + '.trim_crystal'
 fn_trim_crystal_startend = fn_alignment + '.trim_crystal_startend'
@@ -405,13 +530,17 @@ frac_range = str(config['filter_alignment']['frac_thresh'])
 fn_trim_clip_filt = fn_trim_clip + '.len_filt' + frac_range
 fn_trim_clip_filt_dedup = fn_trim_clip_filt + '.dedup'
 fn_trim_clip_filt_dedup_map = fn_trim_clip_filt + '.json'
+fn_trim_clip_dedup = fn_trim_clip + '.dedup'
+fn_trim_clip_dedup_map = fn_trim_clip_dedup + '.json'
 
 # Build DB Tree
-dir_tree = config['dir_out'] + f'/tree/backbone_{bn_hmm_genes}_{bn_clust_sub}'
+bn_backbone = f'backbone_{bn_hmm_genes}_{bn_clust_sub}'
+dir_tree = config['dir_out'] + f'/tree/backbone/{bn_backbone}'
 bn_tree = 'db-crystal-manual'
-fn_alignment_noenv = f'{dir_tree}/{bn_tree}.aln.trim_crystal.clipkit.len_filt{frac_range}'
-fn_alignment_noenv_clip = f'{dir_tree}/{bn_tree}.aln.trim_crystal.clipkit.len_filt{frac_range}.clipkit'
+fn_alignment_noenv = f'{dir_tree}/{bn_tree}.aln.trim_crystal.clipkit'
+fn_alignment_noenv_clip = f'{fn_alignment_noenv}.clipkit'
 fn_alignment_noenv_cliplog = f'{fn_alignment_noenv_clip}.log'
+fn_alignment_noenv_clip_filt = f'{fn_alignment_noenv_clip}.len_filt{frac_range}'
 dir_fasttree = f'{dir_tree}/fasttree'
 dir_ft_boot = f'{dir_fasttree}/bootstraps'
 ext_bootstrap = '{rep}.fa'  # extension must be {rep}.fa 
@@ -424,27 +553,35 @@ fn_headers_crystal_manual = f'{dir_tree}/crystal-manual.headers'
 dir_roguenarok = f'{dir_tree}/roguenarok'
 fn_roguenarok = f'{dir_roguenarok}/RogueNaRok_droppedRogues.{bn_tree}'  # Must be RogueNaRok_droppedRogues.<basename>
 fn_rogues_to_drop = f'{dir_roguenarok}/rogues_to_drop.{bn_tree}'  # Must be RogueNaRok_droppedRogues.<basename>
-fn_alignment_noenv_clip_drop = fn_alignment_noenv_clip + '.drop_rogues'
-fn_full_tree_done = f'{dir_tree}/raxml_tree_done.{bn_tree}'
-
+fn_alignment_noenv_clip_filt_drop = fn_alignment_noenv_clip_filt + '.drop_rogues'
+dir_raxml = f'{dir_tree}/raxml'
+fn_full_tree_done = f'{dir_raxml}/raxml_tree_done.{bn_tree}'
+fn_tree_support = f'{dir_raxml}/{bn_tree}.raxml.support'
+nml = re.sub(r'[\{\},]','',config['build_tree']['n_trees_extra'])
+nboot = config['build_tree']['n_bootstraps_extra']
+seed = config['build_tree']['seed_extra']
+bn_extra_ml_and_bootstraps = f'extra_ml_{nml}_and_bootstraps_{nboot}_seed_{seed}'
+fn_extra_ml_and_bootstraps_done = f'{dir_tree}/extra_raxml_done.txt'
+fn_extra_tree_support = f'{dir_raxml}/{bn_extra_ml_and_bootstraps}.raxml.supportTBE'
 
 # Env tree placement
 bn_env_target = ''
 for gene in config['target_genes_for_env_placement']:
     bn_env_target += gene + '_'
 bn_env_target = bn_env_target.rstrip('_')
-dir_env_tree = f'{dir_tree}/env_placement/{bn_env_clust}/{bn_env_target}'
+dir_env_tree = config['dir_out'] + f'/tree/env_placement/{bn_backbone}/{bn_env_clust}/{bn_env_target}'
 bn_env_tree = f'env_{bn_env_target}-db_{bn_hmm_genes}-crystal-manual'
 fn_env_aligned_mask = f'{dir_env_tree}/{bn_env_tree}_masked.aln'
 fn_env_aligned_mask_dedup = f'{fn_env_aligned_mask}.dedup'
 fn_env_aligned_mask_dedup_map = f'{fn_env_aligned_mask_dedup}.map'
 fn_env_aligned_mask_dedup_tfilt = f'{fn_env_aligned_mask_dedup}.target_gene_filt'
 fn_env_aligned_mask_dedup_tfilt_filt = f'{fn_env_aligned_mask_dedup_tfilt}.short_long_filt'
+dir_env_tree_raxml = f'{dir_env_tree}/raxml'
 fn_place_env_tree_done = (
     f'{dir_env_tree}/tree_done.{bn_env_tree}'
 )
 fn_place_env_tree = (
-    f'{dir_env_tree}/RAxML_labelledTree.{bn_env_tree}'
+    f'{dir_env_tree_raxml}/RAxML_labelledTree.{bn_env_tree}'
 )
 
 # Experiment tree placement
@@ -452,40 +589,80 @@ bn_exp_target = ''
 for gene in config['target_genes_for_exp_placement']:
     bn_exp_target += gene + '_'
 bn_exp_target = bn_exp_target.rstrip('_')
-dir_exp_tree = f'{dir_tree}/exp_placement/{bn_exp_clust}/{bn_exp_target}'
+dir_exp_tree = config['dir_out'] + f'/tree/exp_placement/{bn_backbone}/{bn_exp_clust}/{bn_exp_target}'
 bn_exp_tree = f'exp_{bn_exp_target}-db_{bn_hmm_genes}-crystal-manual'
 fn_exp_aligned_mask_dedup_tfilt = f'{dir_exp_tree}/{bn_exp_tree}_masked.dedup.target_gene_filt'
 fn_exp_aligned_mask_dedup_tfilt_filt = f'{fn_exp_aligned_mask_dedup_tfilt}.short_long_filt'
+dir_exp_tree_raxml = f'{dir_exp_tree}/raxml'
 fn_place_exp_tree_done = (
     f'{dir_exp_tree}/tree_done.{bn_exp_tree}'
 )
 fn_place_exp_tree = (
-    f'{dir_exp_tree}/RAxML_labelledTree.{bn_exp_tree}'
+    f'{dir_exp_tree_raxml}/RAxML_labelledTree.{bn_exp_tree}'
 )
 
+# Target placement for env + exp
+bn_target_pl = ''
+for gene in TGENES:
+    bn_target_pl += gene + '_'
+bn_target_pl = bn_target_pl.rstrip('_')
+dir_target_pl_tree = (
+    config['dir_out'] 
+    + f'/tree/target_placement/{bn_backbone}/exp_{bn_exp_clust}-env_{bn_env_clust}/{bn_target_pl}'
+)
+bn_target_pl_tree = f'expenv_{bn_target_pl}-db_{bn_hmm_genes}-crystal-manual'
+fn_target_aligned_mask_dedup_tfilt = f'{dir_target_pl_tree}/{bn_target_pl_tree}_masked.dedup.target_gene_filt'
+fn_target_aligned_mask_dedup_tfilt_filt = f'{fn_target_aligned_mask_dedup_tfilt}.short_long_filt'
+dir_target_pl_tree_raxml = f'{dir_target_pl_tree}/raxml'
+fn_place_target_tree_done = (
+    f'{dir_target_pl_tree}/tree_done.{bn_target_pl_tree}'
+)
+fn_place_target_tree = (
+    f'{dir_target_pl_tree_raxml}/RAxML_labelledTree.{bn_target_pl_tree}'
+)
+fn_place_target_jplace = (
+    f'{dir_target_pl_tree_raxml}/RAxML_portableTree.{bn_target_pl_tree}.jplace'
+)
+fn_place_target_jplace_support = (
+    f'{dir_target_pl_tree_raxml}/RAxML_portableTree.{bn_target_pl_tree}.support.jplace'
+)
+
+# TODO: clear out old separate placement of experiment and environmental seqs
 # Tree annotation
 dir_annot = f'{dir_env_tree}/annotation'
-fn_table_annotate_env = f'{dir_annot}/annotations_env.csv'
-fn_table_annotate_db = f'{dir_annot}/annotations_db.csv'
-fn_table_annotate_crystal = f'{dir_annot}/annotations_crystal.csv'
-fn_table_annotate_manual = f'{dir_annot}/annotations_manual.csv'
-fn_table_annotations = f'{dir_annot}/annotations_merge.csv'
-fn_taxon_colorstrip = f'{dir_annot}/Taxon_colorstrip.txt'
-fn_domain_colorstrip = f'{dir_annot}/Domain_colorstrip.txt'
-fn_substrate_treecolors = f'{dir_annot}/Substrate_treecolors.txt'
-fn_source_treecolors = f'{dir_annot}/Source_treecolors.txt'
-fn_fbp1_colorstrip = f'{dir_annot}/Gene_colorstrip.txt'
+# fn_table_annotate_env = f'{dir_annot}/annotations_env.csv'
+# fn_table_annotate_db = f'{dir_annot}/annotations_db.csv'
+# fn_table_annotate_crystal = f'{dir_annot}/annotations_crystal.csv'
+# fn_table_annotate_manual = f'{dir_annot}/annotations_manual.csv'
+# fn_table_annotations = f'{dir_annot}/annotations_merge.csv'
+# fn_taxon_colorstrip = f'{dir_annot}/Taxon_colorstrip.txt'
+# fn_domain_colorstrip = f'{dir_annot}/Domain_colorstrip.txt'
+# fn_substrate_treecolors = f'{dir_annot}/Substrate_treecolors.txt'
+# fn_source_treecolors = f'{dir_annot}/Source_treecolors.txt'
+# fn_fbp1_colorstrip = f'{dir_annot}/Gene_colorstrip.txt'
 # fn_crystal_symbol = f'{dir_annot}/crystal_symbol.txt'
 
 # Experiment tree annotation
 dir_annot_exp = f'{dir_exp_tree}/annotation'
-fn_table_annotate_exp = f'{dir_annot_exp}/annotations_exp.csv' 
-fn_taxon_colorstrip_exp = f'{dir_annot_exp}/Taxon_colorstrip.txt'
-fn_domain_colorstrip_exp = f'{dir_annot_exp}/Domain_colorstrip.txt'
-fn_substrate_treecolors_exp = f'{dir_annot_exp}/Substrate_treecolors.txt'
-fn_source_treecolors_exp = f'{dir_annot_exp}/Source_treecolors.txt'
-fn_fbp1_colorstrip_exp = f'{dir_annot_exp}/Gene_colorstrip.txt'
+# fn_table_annotate_exp = f'{dir_annot_exp}/annotations_exp.csv' 
+# fn_taxon_colorstrip_exp = f'{dir_annot_exp}/Taxon_colorstrip.txt'
+# fn_domain_colorstrip_exp = f'{dir_annot_exp}/Domain_colorstrip.txt'
+# fn_substrate_treecolors_exp = f'{dir_annot_exp}/Substrate_treecolors.txt'
+# fn_source_treecolors_exp = f'{dir_annot_exp}/Source_treecolors.txt'
+# fn_fbp1_colorstrip_exp = f'{dir_annot_exp}/Gene_colorstrip.txt'
 
+# exp + env annotations
+dir_annot_target_pl = f'{dir_target_pl_tree}/annotation'
+dir_annot_tbl = f'{dir_annot_target_pl}/tables'
+fn_table_annotate_env = f'{dir_annot_tbl}/annotations_env.csv'
+fn_table_annotate_db = f'{dir_annot_tbl}/annotations_db.csv'
+fn_table_annotate_crystal = f'{dir_annot_tbl}/annotations_crystal.csv'
+fn_table_annotate_manual = f'{dir_annot_tbl}/annotations_manual.csv'
+fn_table_annotate_exp = f'{dir_annot_tbl}/annotations_exp.csv' 
+fn_table_annotations = f'{dir_annot_tbl}/annotations_merge.csv'
+dir_annot_itol = f'{dir_annot_target_pl}/itol'
+fn_target_pl_annot_done = f'{dir_annot_target_pl}/annotation_done.txt'
+dir_target_pl_tree_gappa = f'{dir_target_pl_tree}/gappa'
 
 # experiment downloads
 dir_download_counts = dir_exp_data + '/{exp_download_counts}/counts_download'
@@ -548,6 +725,7 @@ fn_read_prep_done = f'{dir_exp}/read_prep_done.txt'
 
 # Experiment quant
 fmt_exp_assembly_quant = dir_exp_data + '/{exp_quant}/assembly.fasta'
+# fmt_exp_assembly_quant = fmt_exp_assembly_rename.format(exp='{exp_quant}')
 dir_quant = dir_exp + '/{exp_quant}/sample_quant'
 dir_salmon_idx = f'{dir_quant}/salmon_index'
 fmt_quant = dir_quant + '/{sample}/quant.sf.gz'
@@ -559,7 +737,7 @@ fn_quant_done = f'{dir_exp}/salmon_and_author_quant_done.txt'
 # deseq
 fmt_exp_counts_merge = dir_exp + '/{exp}/sample_quant/' + ext_counts_agg
 dir_exp_deseq = dir_exp + '/{exp}/deseq'
-dir_exp_counts_clust = f'{dir_exp_deseq}/counts_clust-genes_{bn_hmm_genes}-{bn_exp_clust}'
+dir_exp_counts_clust = f'{dir_exp_deseq}/counts_clust-genes_{bn_hmm_target}-{bn_exp_clust}'
 fmt_exp_counts_clust = f'{dir_exp_counts_clust}/counts.parquet'
 fmt_exp_meta = f'{dir_exp_deseq}/metadata.csv'
 dir_exp_deseq = f'{dir_exp_counts_clust}/stats'

@@ -1,6 +1,6 @@
 rule filter_exp_target_genes_to_place:
     input:
-        backbone = fn_alignment_noenv_clip_drop,
+        backbone = fn_alignment_noenv_clip_filt_drop,
         fns_target = get_target_exp_rep_seqs,
         crystal = expand(fmt_crystal_seqs, rcsb_id=config['rcsb_ids']),
         manual = glob.glob(config['dir_ref_man'] + '/*'),
@@ -47,9 +47,11 @@ rule filter_exp_alignment_very_short_long:
 rule place_exp_on_tree:
     input:
         msa = fn_exp_aligned_mask_dedup_tfilt_filt,
-        tree_done = fn_full_tree_done
+        tree_done = fn_full_tree_done,
+        # d = dir_raxml,
     output:
-        fn_place_exp_tree_done
+        d = directory(dir_exp_tree_raxml),
+        done = fn_place_exp_tree_done,
     log:
         "logs/place_exp_on_tree.log"
     benchmark:
@@ -63,12 +65,13 @@ rule place_exp_on_tree:
         bn_out = bn_exp_tree,
         w_out = dir_exp_tree,
         bn_tree = bn_tree,
-        dir_tree = dir_tree,
+        dir_tree = dir_raxml,
     shell:
         """
         CWD=$( pwd )
-        DIR_OUT="$CWD"/{params.w_out:q}
-        FN_TREE={params.dir_tree:q}/RAxML_bestTree.{params.bn_tree:q}
+        DIR_OUT="$CWD"/{output.d:q}
+        mkdir -p "$DIR_OUT"
+        FN_TREE={input.d:q}/RAxML_bestTree.{params.bn_tree:q}
         raxmlHPC-PTHREADS-AVX \
             -f v \
             -w "$DIR_OUT" \
@@ -79,5 +82,5 @@ rule place_exp_on_tree:
             -n {params.bn_out:q} \
             2> {log}
 
-        echo "Done" > {output:q}
+        echo "Done" > {output.done:q}
         """

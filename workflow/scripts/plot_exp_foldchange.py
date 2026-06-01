@@ -37,10 +37,10 @@ from ibis import _, selectors
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
-def save_fig(bn, exts=['png','pdf'], dpi=500):
+def save_fig(fig, bn, exts=['png','pdf'], dpi=500):
     fns_out = [f'{bn}.{ext}' for ext in exts]
     for fn_out in fns_out:
-        plt.savefig(fn_out, dpi=dpi, bbox_inches='tight')
+        fig.savefig(fn_out, dpi=dpi, bbox_inches='tight')
 
 
 @click.command()
@@ -139,13 +139,13 @@ def main(counts_path, colname_contigs, clusters_format, metadata_path, stats_dir
     
     exp_config = exp_info[experiment]
     dict_ctrl_tests = exp_config['deseq_ctrl_tests']
-    prefix = exp_config['prefix']
+    # prefix = exp_config['prefix']
+    re_subs = exp_config.get('re_subs_fasta2counts')
 
     plotg = config['experiment_fold_change_plots']
     plot_e = exp_config['plot_deseq']
 
     for gene in config['target_genes_for_exp_placement']:
-        fig, ax = plt.subplots(figsize=plot_e['figsize'])
         # Load clusters for target gene
         dict_clust_contig = defaultdict(list)
         fn_cl = clusters_format.format(exp=experiment, gene=gene)
@@ -154,9 +154,16 @@ def main(counts_path, colname_contigs, clusters_format, metadata_path, stats_dir
             column_names=["cluster","contig"], header=False
         ).to_pandas()
         for clust, cont in clusters_table.values:
-            clust_ = re.sub(prefix + '_','',clust)
-            clust_ = re.sub(r'_\d+$','',clust_)
-            dict_clust_contig[clust_].append(cont)
+            # remove prefix and 6tr frame
+            cs = []
+            for c in [clust, cont]:
+                c_ = re.sub(r'_\d+$','',c)
+                # c_ = re.sub(f'{prefix}_','', c_)
+                if re_subs is not None:
+                    for subs in re_subs:
+                        c_ = re.sub(subs[0],subs[1],c_)
+                cs.append(c_)
+            dict_clust_contig[cs[0]].append(cs[1])
 
         # Get order of clusts based on sum of relative abundances
         colns_sam = metadata_df.index.to_list()
@@ -170,90 +177,73 @@ def main(counts_path, colname_contigs, clusters_format, metadata_path, stats_dir
             df_sums.values, axis=1
         ) * 100
         df_pct['relabund_sum'] = df_pct.sum(axis=1)
-        df_pct[colname_contigs] = df_counts[colname_contigs]
+        df_pct.index = df_counts[colname_contigs]
         df_pct = df_pct.sort_values(by='relabund_sum', ascending=False)
         ncontigs = df_pct.shape[0]
-
-        # Get each control case
         nctrls = len(dict_ctrl_tests)
-        for i, (ctrl, tests) in enumerate(dict_ctrl_tests.items()):
-            ntests = len(tests)
 
-            # Get the ctrl columns
-            colns_ctrl = metadata_df[
-                metadata_df['condition'] == ctrl
-            ].index.to_list()
-            # means_ctrl = df_counts[colns_ctrl].mean(axis=1)
+        # # info for stacked plot
+        # dict_ctrl_stack = {
+        #     "grouping": {},
+        #     "scat": [[],[]],
+        #     "pvals": {},
+        #     "nds": {},
+        #     "yticks": [[],[]],
+        # }
 
-            # # Get all scatter plot values
-            # df_scat = np.log2(df_counts[colns_sam].div(means_ctrl, axis=0))
-            df_scat = df_pct
+        # iterate through contigs
+        for h, df_scat in df_pct.iterrows():
+            # clust = df_scat[colname_contigs]
+            clust = h
+            for i, (ctrl, tests) in enumerate(dict_ctrl_tests.items()):
+                ntests = len(tests)
+                
+                # Percent of transcripts plot
+                fig, ax = plt.subplots(figsize=plot_e['figsize'])
+                # Log fold change plot
+                fig1, ax1 = plt.subplots(figsize=plot_e['figsize'])
+                
 
-            # bar plot ctrl
-            spread_clust = plotg['spread_clust']
-            spread_ctrl = plotg['spread_ctrl']
-            bar_width = spread_clust*(1 - plotg['bar_gap_frac'])/(ntests + 1)
-            yb = df_scat[colns_ctrl].mean(axis=1)
-            # yb = np.log2(df_counts[colns_tst].mean(axis=1) / means_ctrl)
-            xb = (np.arange(ncontigs) - spread_clust/2 
-                  + i*nctrls + spread_ctrl).tolist()
-            ax.barh(xb, yb, bar_width, color=plotg['barcolor'])
-            yticks = xb
-            yticklabels = [ctrl]*len(xb)
-
-            # Plot ctrl scatter
-            xsc = [r for c in df_scat[colns_ctrl].values for r in c]
-            jit = plotg['xjit_bar_frac']*bar_width
-            yjits = np.linspace(-jit, jit, len(colns_ctrl))
-            ysc = [
-                (k - spread_clust/2 + i*nctrls + spread_ctrl + yjits[l])
-                for k, c in enumerate(df_scat[colns_ctrl].values)
-                for l, _ in enumerate(c)
-            ]
-            ax.scatter(
-                xsc, ysc, 
-                facecolor=plotg['dotcolor'],
-                edgecolor='none', 
-                s=plotg['dotsize'], 
-                alpha=plotg['dotalpha']
-            )
-
-            # Get non detected ctrl
-            dict_xb_nd = {}
-            for x_, ys in zip(xb, df_scat[colns_ctrl].values):
-                nd = 0
-                for y_ in ys:
-                    if y_ == 0:
-                        nd += 1
-                if nd > 0:
-                    dict_xb_nd[x_] = nd
-
-
-            # Get each test case
-            dict_xb_pval = {}
-            for j, test in enumerate(tests):
-
-                # bar plot
-                colns_tst = metadata_df[
-                    metadata_df['condition'] == test
+                # Get the ctrl columns
+                colns_ctrl = metadata_df[
+                    metadata_df['condition'] == ctrl
                 ].index.to_list()
-                yb = df_scat[colns_tst].mean(axis=1)
-                # yb = np.log2(df_counts[colns_tst].mean(axis=1) / means_ctrl)
-                xb = (np.arange(ncontigs) + (j + 1)*spread_clust/ntests 
-                      - spread_clust/2 + i*nctrls + spread_ctrl).tolist()
-                ax.barh(xb, yb, bar_width, color=plotg['barcolor'])
-                yticks += xb
-                yticklabels += [test]*len(xb)
+                # if h == 0:
+                #     for coln in colns_ctrl:
+                #         dict_ctrl_stack[ctrl]['grouping'][coln] = ctrl
 
-                # scatter plot
-                xsc = [r for c in df_scat[colns_tst].values for r in c]
-                yjits = np.linspace(-jit, jit, len(colns_tst))
-                ysc = [
-                    (k + (j + 1)*spread_clust/ntests - spread_clust/2 
-                     + i*nctrls + spread_ctrl + yjits[l])
-                    for k, c in enumerate(df_scat[colns_tst].values)
-                    for l, _ in enumerate(c)
-                ]
+                # means_ctrl = df_counts[colns_ctrl].mean(axis=1)
+
+                # # Get all scatter plot values
+                # df_scat = np.log2(df_counts[colns_sam].div(means_ctrl, axis=0))
+                # df_scat = df_pct
+
+                # bar plot ctrl
+                # spread_clust = plotg['spread_clust']
+                # spread_ctrl = plotg['spread_ctrl']
+                # bar_width = spread_clust*(1 - plotg['bar_gap_frac'])/(ntests + 1)
+                bar_width = plotg['bar_width']
+                yb = df_scat.loc[colns_ctrl].mean()
+                # yb = np.log2(df_counts[colns_tst].mean(axis=1) / means_ctrl)
+                # xb = (np.arange(ncontigs) - spread_clust/2 
+                #     + i*nctrls + spread_ctrl).tolist()
+                x_ = 0
+                xb = [x_]
+                ax.barh(xb, yb, bar_width, color=plotg['barcolor'])
+                yticks = xb
+                yticklabels = [ctrl]*len(xb)
+
+                # Plot ctrl scatter
+                xsc = df_scat.loc[colns_ctrl].values.tolist()
+                # xsc = [r for c in df_scat.loc[colns_ctrl].values for r in c]
+                jit = plotg['xjit_bar_frac']*bar_width / 2
+                yjits = np.linspace(-jit, jit, len(colns_ctrl))
+                ysc = [yjits[l] for l in range(len(xsc))]
+                # ysc = [
+                #     (k - spread_clust/2 + i*nctrls + spread_ctrl + yjits[l])
+                #     for k, c in enumerate(df_scat.loc[colns_ctrl].values)
+                #     for l, _ in enumerate(c)
+                # ]
                 ax.scatter(
                     xsc, ysc, 
                     facecolor=plotg['dotcolor'],
@@ -262,14 +252,217 @@ def main(counts_path, colname_contigs, clusters_format, metadata_path, stats_dir
                     alpha=plotg['dotalpha']
                 )
 
-                # Get non detected
-                for x_, ys in zip(xb, df_scat[colns_tst].values):
+                # Get non detected ctrl
+                dict_xb_nd = {}
+                # for ys in df_scat.loc[colns_ctrl].values:
+                nd = 0
+                for y_ in df_scat.loc[colns_ctrl].values:
+                    if y_ == 0:
+                        nd += 1
+                if nd > 0:
+                    dict_xb_nd[x_] = nd
+
+
+                # Get each test case
+                dict_xb_pval = {}
+                for j, test in enumerate(tests):
+                    x_ = j+1
+                    # bar plot
+                    colns_tst = metadata_df[
+                        metadata_df['condition'] == test
+                    ].index.to_list()
+                    # if h == 0:
+                    #     for coln in colns_tst:
+                    #         dict_ctrl_stack[ctrl]['grouping'][coln] = test
+                    yb = df_scat.loc[colns_tst].mean()
+                    xb = [x_]
+                    # yb = np.log2(df_counts[colns_tst].mean(axis=1) / means_ctrl)
+                    # xb = (np.arange(ncontigs) + (j + 1)*spread_clust/ntests 
+                    #     - spread_clust/2 + i*nctrls + spread_ctrl).tolist()
+                    ax.barh(xb, yb, bar_width, color=plotg['barcolor'])
+                    yticks += xb
+                    yticklabels += [test]*len(xb)
+
+
+                    # scatter plot
+                    # xsc = [r for c in df_scat[colns_tst].values for r in c]
+                    xsc = df_scat.loc[colns_tst].values.tolist()
+                    yjits = np.linspace(-jit, jit, len(colns_tst))
+                    ysc = [x_ + yjits[l] for l in range(len(xsc))]
+                    # ysc = [
+                    #     (k + (j + 1)*spread_clust/ntests - spread_clust/2 
+                    #     + i*nctrls + spread_ctrl + yjits[l])
+                    #     for k, c in enumerate(df_scat[colns_tst].values)
+                    #     for l, _ in enumerate(c)
+                    # ]
+                    ax.scatter(
+                        xsc, ysc, 
+                        facecolor=plotg['dotcolor'],
+                        edgecolor='none', 
+                        s=plotg['dotsize'], 
+                        alpha=plotg['dotalpha']
+                    )
+
+                    # Get non detected
+                    # for ys in zip(xb, df_scat.loc[colns_tst].values):
                     nd = 0
-                    for y_ in ys:
+                    for y_ in df_scat.loc[colns_tst].values:
                         if y_ == 0:
                             nd += 1
                     if nd > 0:
                         dict_xb_nd[x_] = nd
+
+                    # Deseq stats 
+                    test_, ctrl_ = [re.sub(r'\s', '_', tc) for tc in [test, ctrl]]
+                    pkl_path = f'{stats_dir}/{experiment}_{test_}_vs_{ctrl_}_stats.pkl'
+                    try:
+                        with open(pkl_path, 'rb') as f:
+                            # Expecting a pydeseq2.ds.DeseqStats object inside
+                            ds = pickle.load(f)
+                    except Exception as e:
+                        click.echo(f"Failed to load {pkl_path}: {e}", err=True)
+
+                    # Shrunk lfc bar plot
+                    if not ds.shrunk_LFCs:
+                        raise ValueError(f"LFCs are not shrunk for comparison {test} vs {ctrl} in file {pkl_path}")
+                    else:
+                        ybl = ds.results_df['log2FoldChange'].get(clust,1)
+                        yblerr = ds.results_df['lfcSE'].get(clust,1)
+                        ax1.barh(
+                            xb, ybl, bar_width, 
+                            xerr=yblerr, 
+                            error_kw={
+                                'elinewidth': plotg['elinewidth'], 
+                                'capsize': plotg['ecapsize']
+                            }, 
+                            color=plotg['barcolor']
+                        )
+
+                    # get_p_vals
+                    # for x_, cl in zip(xb, df_scat[colname_contigs].values):
+                    pval = ds.results_df['pvalue'].get(clust,1)
+                    dict_xb_pval[x_] = pval
+
+                # Print significant p values to the figures
+                for ax_ in [ax, ax1]:
+                    xlims = ax_.get_xlim()
+                    xticks = ax_.get_xticks()
+                    xtickrange = xticks[1] - xticks[0]
+                    for y_, pval in dict_xb_pval.items():
+                        if (pval is not None) and (pval < 0.05):
+                            pv = round(pval,4)
+                            pv = f'={pv}' if pv > 0 else f'<0.00005'
+                            txt = f'p{pv}'
+                            # txt = f'p{pv}' if ax_ == ax1 else '*'
+                            ax_.text(
+                                xlims[1] + xtickrange*plotg['pval_adj'], y_, txt,
+                                fontsize=plotg['ft0'] - 1,
+                                va='center',
+                                ha='right'
+                            )
+
+                    # Print nds to the figure
+                    if dict_xb_nd:
+                        for y_, nd in dict_xb_nd.items():
+                            ax_.text(
+                                xlims[0] + xtickrange*plotg['nd_shift'],  y_, f'n.d.({nd})',
+                                fontsize=plotg['ft0'] - 1,
+                                va='center',
+                                ha='left'
+                            )
+
+
+                    # adjust the plots
+                    ax_.set_yticks(yticks, labels=yticklabels)
+                    ax_.tick_params(axis='y', labelsize=plotg['ft1']) 
+                    ax_.tick_params(axis='x', labelsize=plotg['ft0'], direction='in') 
+                    ax_.tick_params(axis='y', length=0, width=0, which='both')
+                    ax_.tick_params(axis='y', pad=plotg['ft1']*1.5)
+                    # Flip around
+                    ax_.invert_yaxis()
+
+                # line at 0 for lfc control
+                lw = ax.spines['bottom'].get_linewidth()
+                ax1.axvline(x=0, color='k', linestyle='-', linewidth=lw)
+                xlims = ax1.get_xlim()
+                xticks = ax1.get_xticks()
+                xtickrange = xticks[1] - xticks[0]
+                adj = 0.01*xtickrange
+                if xlims[0] == 0:
+                    ax1.set_xlim(xlims[0]-adj, xlims[1])
+                elif xlims[1] == 0:
+                    ax1.set_xlim(xlims[0], xlims[1]+adj)
+                
+                # # labels
+                # ax.set_xlabel('Estimated percent of transcripts', fontsize=plotg['ft1'])
+                # ax1.set_xlabel(f'Log2(Fold Change vs {ctrl})', fontsize=plotg['ft1'])
+
+                # remove spines
+                spines_invisible = {ax:['right','top'], ax1:['left','right','top']}
+                for ax_, si in spines_invisible.items():
+                    for s in si:
+                        ax_.spines[s].set_visible(False)
+  
+                # Save plot
+                for tp, fig_ in zip(['pct','lfc'],[fig, fig1]):
+                    od = f'{output_dir}/{tp}'
+                    os.makedirs(od, exist_ok=True)
+                    ctrl_ = re.sub('_','',ctrl)
+                    bn = f'{od}/horizontal_bar_{tp}-{gene}-{experiment}_{clust}_{ctrl_}'
+                    plt.figure(fig_)
+                    save_fig(fig_, bn)
+                    plt.close(fig_)
+
+                    click.echo(f"Output saved to {bn}.pdf")
+
+        # Plot stacked bar
+        for i, (ctrl, tests) in enumerate(dict_ctrl_tests.items()):
+            # Get plot info
+            colns_ctrl = metadata_df[
+                metadata_df['condition'] == ctrl
+            ].index.to_list()
+            # Get values
+            gene_clust_name = fn_cl
+            # df_countsg = counts_table.select([colname_contigs] + colns_sam).filter(
+            #     counts_table[colname_contigs] == gene_clust_name
+            # ).to_pandas()
+            df_countsg = counts_table.select([colname_contigs] + colns_sam).filter(
+                counts_table[colname_contigs] == gene_clust_name
+            ).to_pandas()
+            df_countsg.index = df_countsg[colname_contigs]
+            df_pctg = df_countsg[colns_sam].div(
+                df_sums.values, axis=1
+            ) * 100
+            df_scat = df_pctg
+            # for grouping
+            dict_coln_xb = {c: 0 for c in colns_ctrl}
+            # scatter
+            coln_order = colns_ctrl
+            ysc2 = np.linspace(-jit, jit, len(colns_ctrl)).tolist()
+            # bar
+            yticks = [0]
+            yticklabels = [ctrl]
+            dict_xb_nd = {}
+            dict_xb_pval = {}
+            for j, test in enumerate(tests):
+                x_ = j+1
+                colns_tst = metadata_df[
+                    metadata_df['condition'] == test
+                ].index.to_list()
+                for c in colns_tst:
+                    dict_coln_xb[c] = x_
+                yticks.append(x_)
+                yticklabels.append(test)
+                coln_order += colns_tst
+                yjits = np.linspace(-jit, jit, len(colns_tst))
+                ysc2 += [x_ + l for l in yjits]
+                # Get non detected
+                nd = 0
+                for y_ in df_scat.loc[:,colns_tst].values[0]:
+                    if y_ == 0:
+                        nd += 1
+                if nd > 0:
+                    dict_xb_nd[x_] = nd
 
                 # Deseq stats 
                 test_, ctrl_ = [re.sub(r'\s', '_', tc) for tc in [test, ctrl]]
@@ -280,91 +473,76 @@ def main(counts_path, colname_contigs, clusters_format, metadata_path, stats_dir
                         ds = pickle.load(f)
                 except Exception as e:
                     click.echo(f"Failed to load {pkl_path}: {e}", err=True)
-                # get_p_vals
-                for x_, cl in zip(xb, df_scat[colname_contigs].values):
-                    pval = ds.results_df['pvalue'].get(cl,1)
-                    dict_xb_pval[x_] = pval
-        
-        # Print significant p values to the figure
-        xlims = ax.get_xlim()
-        xticks = ax.get_xticks()
-        xtickrange = xticks[1] - xticks[0]
-        for x_, pval in dict_xb_pval.items():
-            if (pval is not None) and (pval < 0.05):
-                pv = round(pval,4)
-                pv = f'={pv}' if pv > 0 else f'<0.00005'
-                ax.text(
-                    xlims[1] + xtickrange*plotg['pval_adj'], x_, f'p{pv}',
-                    fontsize=plotg['ft0'] - 1,
-                    va='baseline',
-                    ha='right'
-                )
+                pval = ds.results_df['pvalue'].get(gene_clust_name,1)
+                dict_xb_pval[x_] = pval
 
-        # Print nds to the figure
-        if dict_xb_nd:
-            for y_, nd in dict_xb_nd.items():
-                ax.text(
-                    xlims[0] + xtickrange*plotg['nd_shift'],  y_, f'n.d.({nd})',
-                    fontsize=plotg['ft0'] - 1,
-                    va='baseline',
-                    ha='left'
-                )
+            fig2, ax2 = plt.subplots(figsize=plot_e['figsize'])
+            
+            # Bar
+            df_stack = df_pct.T.groupby(dict_coln_xb).mean()
+            cmap = plot_e.get('stacked_cmap')
+            cmap = cmap if cmap is not None else 'tab20'
+            tmp = df_stack.plot(ax=ax2, kind='barh', 
+                                stacked=True, cmap=cmap,
+                                legend=True
+                                )
+            
+            # scatter
+            xsc2 = df_scat[coln_order].values
+            ax2.scatter(xsc2, ysc2, color='k', s=plotg['dotsize'])
+            
+            fig_, ax_ = fig2, ax2
+            # Plot pvals
+            xlims = ax_.get_xlim()
+            xticks = ax_.get_xticks()
+            xtickrange = xticks[1] - xticks[0]
+            for y_, pval in dict_xb_pval.items():
+                if (pval is not None) and (pval < 0.05):
+                    pv = round(pval,4)
+                    pv = f'={pv}' if pv > 0 else f'<0.00005'
+                    txt = f'p{pv}'
+                    # txt = f'p{pv}' if ax_ == ax1 else '*'
+                    ax_.text(
+                        xlims[1] + xtickrange*plotg['pval_adj'], y_, txt,
+                        fontsize=plotg['ft0'] - 1,
+                        va='center',
+                        ha='right'
+                    )
 
-        # # line at 0 for control
-        # ax.axvline(x=0, color='k', linestyle='-', linewidth=1)
+            # Print nds to the figure
+            if dict_xb_nd:
+                for y_, nd in dict_xb_nd.items():
+                    ax_.text(
+                        xlims[0] + xtickrange*plotg['nd_shift'],  y_, f'n.d.({nd})',
+                        fontsize=plotg['ft0'] - 1,
+                        va='center',
+                        ha='left'
+                    )
 
-        # adjust the plot
-        spines_invisible = ['right','top']
-        for s in spines_invisible:
-            ax.spines[s].set_visible(False)
-        ax.set_yticks(yticks, labels=yticklabels)
-        ax.tick_params(axis='y', labelsize=plotg['ft1']) 
-        ax.tick_params(axis='x', labelsize=plotg['ft0'], direction='in') 
-        # ax.tick_params(axis='y', length=0, width=0, which='both')
-        ax.tick_params(axis='y', pad=plotg['ft1']*1.5)
+            # adjust the plots
+            ax_.set_yticks(yticks, labels=yticklabels)
+            ax_.tick_params(axis='y', labelsize=plotg['ft1']) 
+            ax_.tick_params(axis='x', labelsize=plotg['ft0'], direction='in') 
+            ax_.tick_params(axis='y', length=0, width=0, which='both')
+            ax_.tick_params(axis='y', pad=plotg['ft1']*1.5)
+            # Flip around
+            ax_.invert_yaxis()
 
-        # # Set up second axis
-        # ax2 = ax.twiny()
-        # spines_invisible = ['left','right']
-        # for s in spines_invisible:
-        #     ax2.spines[s].set_visible(False)
-        # ax2.tick_params(axis='x', labelsize=plotg['ft1'], direction='in') 
-        # ## Get tick translation
-        # # max and min plotted vals
-        # yvals = counts_table[colns_sam].values
-        # yvals_gt0 = yvals[yvals > 0]
-        # mxval = np.max(yvals_gt0)
-        # mnval = np.min(yvals_gt0)
-        # # max and min exponents used in sci notation
-        # expmn = math.floor(np.log10(mnval))
-        # expmx = math.floor(np.log10(mxval))
-        # tickexps = np.arange(expmn, expmx + 1)
-        # # values to plot as ticks for each exponent
-        # tvals = np.array([1,5]) if expmx - expmn > 1 else np.array([1,2,4,8])
-        # y2ticklabels = []
-        # for exp in tickexps:
-        #     newticks = (tvals/10**(-exp)).tolist()
-        #     y2ticklabels += newticks
-        # # Convert to the original ax scale
-        # y2ticks = np.log2(y2ticklabels/mean_ctrl)
-        # ax2.set_xticks(y2ticks, labels=y2ticklabels, rotation=45, ha='right',rotation_mode="anchor");
-        # # # Adjust horizontal position
-        # # Now limit to the original axis
-        # ax2.set_xlim(ax.get_xlim())
-        # # Flip around
-        ax.invert_yaxis()
-        # ax.tick_params(axis='x', top=True, bottom=False, labeltop=True, labelbottom=False)
-        # ax.xaxis.set_ticks_position('top')
-        # ax2.xaxis.set_ticks_position('bottom')
-        # ax2.xaxis.set_label_position('bottom')
+            # remove spines
+            for s in ['top','right']:
+                ax_.spines[s].set_visible(False)
 
-        # Save plot
-        os.makedirs(output_dir, exist_ok=True)
-        bn = f'{output_dir}/horizontal_bar_{gene}-{experiment}'
-        save_fig(bn)
-        plt.close()
+            # save plot
+            od = f'{output_dir}/stacked'
+            os.makedirs(od, exist_ok=True)
+            ctrl_ = re.sub('_','',ctrl)
+            bn = f'{od}/horizontal_bar_stacked-{gene}-{experiment}_{ctrl_}'
+            plt.figure(fig_)
+            save_fig(fig_, bn)
+            plt.close(fig_)
 
-        click.echo(f"Output saved to {bn}.pdf")
+
+
     return
 
 if __name__ == '__main__':

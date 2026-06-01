@@ -19,6 +19,7 @@ rule cluster_experiment_counts:
     params:
         script=config['dir_scripts'] + "/cluster_experiment_counts.py",
         colname = lambda w: get_colname_contigs(w.exp),
+        fn_exp_info = config['fn_experiment_info'],
     shell:
         """
         ARG_l="-l {input.clusts} "
@@ -27,7 +28,9 @@ rule cluster_experiment_counts:
         fi
         python3 {params.script:q} \
             -c {input.counts:q} \
-            -n {params.colname} \
+            -n contig_name \
+            -e {params.fn_exp_info:q} \
+            -x {wildcards.exp} \
             -o {output:q} \
             -m {resources.mem_mb}M \
             -t {threads} \
