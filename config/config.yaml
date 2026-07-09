@@ -344,3 +344,108 @@ experiment_fold_change_plots:
   ecapsize: 2
   # bar_gap_frac: 0.25
 
+
+agg_transect_tables:
+  fe_hawco:
+    targets: {
+      'dFe (nM)':'nM',
+    }
+    fn_data: /scratch/bgrodner/cmap_data/Hawco_et_al_2025_pnas.2418201122.sd01.csv
+    columns: 
+      cruise: Expedition
+      year: Year
+      lat: 'Lattitude (degrees N)'
+      lon: 'Longitude (degrees East)'
+      depth: 'Depth (m)'
+    cruise_rename: {
+      G1: "Gradients 1",
+      G2: "Gradients 2",
+      G3: "Gradients 3",
+    }
+  nuts_g1:
+    target:
+    fn_data:
+    columns:
+    cruise:
+  nuts_g2:
+    target:
+    fn_data:
+    columns:
+    cruise:
+  nuts_g3:
+    target:
+    fn_data:
+    columns:
+    cruise:
+
+
+prevalence:
+  dtp: genome
+  ttnames:
+    - Bacillariophyta
+    - Haptophyta
+    - Dinophyceae
+    - Chlorophyta
+    - Prasinodermophyta
+    - Pelagophyceae
+  treelabels:
+    - Haptophyta
+    - Bacillariophyta
+    - Dinophyceae
+    - Prasinoderma coloniale
+    - Chlorophyta
+    - Pelagophyceae
+
+  figsize: [3,6]
+  width_ratios: [3,1]
+  wspace: 0.01
+  ft0: 6
+  ft1: 7
+  ft2: 8
+
+  cmap: plasma
+  heatmap_whitespace_width: 2
+  cbar_lab: "Number of Copies"
+
+  ticklabel_rotation: 45
+
+build_barnacle_tidy:
+  fn_metadata: /scratch/bgrodner/metaT_data/old_pipeline_chris_parquets/metadata.csv
+  batches_to_run: [
+      "G1PA",
+      "G2PA",
+      "G3PA.UW",
+  ]
+  contig_colname: target_id
+  target_gene_name: FBP1
+  dict_tax_include:
+    phylum: ["Bacillariophyta", "Haptophyta", "Chlorophyta"]
+    class: ["Pelagophyceae", "Dinophyceae"]
+  ko_colname: KO
+  counts_colname: counts
+
+  new_tax_colname: taxname
+
+  sum_exclude_cols: [
+          "taxid", "domain", "kingdom", "phylum", "class", "order", 
+          "family", "genus", "species", "KO", "KO_definition","score", 
+          "target_id_right", "contig_name_6tr", "target_id", "taxname",
+          "length"
+      ]
+
+
+  values_merge_colname: kallisto_fn
+  meta_merge_colname: kallisto_fn
+  metadata_columns: [
+    "kallisto_fn","SampleID", "NORM_FACTOR", "batch_meta"
+  ]
+
+  sample_filt_rep_colname: SampleID
+  sample_filt_rep_regex: '^(?P<sample>.+)\.(?P<filt>0\.2um|3um)\.(?P<rep>\w)$'
+  sample_colname: sample
+  filt_colname: filt
+  rep_colname: rep
+  norm_colname: NORM_FACTOR
+  trl_colname: transcripts_per_liter
+
+  batch_colname: batch_meta
