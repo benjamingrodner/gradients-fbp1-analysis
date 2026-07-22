@@ -388,26 +388,37 @@ prevalence:
     - Chlorophyta
     - Prasinodermophyta
     - Pelagophyceae
+
+  count_min: 0
+  count_min_gene: 'FBP1'
+
+  label_leaves: False
   treelabels:
     - Haptophyta
     - Bacillariophyta
     - Dinophyceae
     - Prasinoderma coloniale
     - Chlorophyta
-    - Pelagophyceae
+    - Pelagophyceae  
 
   figsize: [3,6]
-  width_ratios: [3,1]
+  width_ratios: [1,1]
   wspace: 0.01
   ft0: 6
   ft1: 7
   ft2: 8
+  tree_lw: 1
+
+  max_count: 10 # none if no limit
 
   cmap: plasma
   heatmap_whitespace_width: 2
   cbar_lab: "Number of Copies"
-
+  cbar_shrink: 0.25
+  cbar_aspect: 20
+  cbar_fraction: 0.1
   ticklabel_rotation: 45
+
 
 build_barnacle_tidy:
   fn_metadata: /scratch/bgrodner/metaT_data/old_pipeline_chris_parquets/metadata.csv
