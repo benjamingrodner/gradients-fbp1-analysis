@@ -21,6 +21,15 @@ def die(msg, code=2):
     raise SystemExit(f"ERROR: {msg}")
 
 
+def require_file(path, label):
+    path = Path(path)
+    if not path.exists():
+        die(f"{label} not found: {path}")
+    if not path.is_file():
+        die(f"{label} is not a file: {path}")
+    return path
+
+
 def save_fig(output_prefix, exts=("png", "pdf"), dpi=500):
     for ext in exts:
         plt.savefig(f"{output_prefix}.{ext}", dpi=dpi, bbox_inches="tight")
@@ -50,9 +59,13 @@ def plot_tree_and_heatmap(
                 [x_coords[parent], x_coords[node]],
                 [y_coords[node], y_coords[node]],
                 color="black",
+                lw=cfg["tree_lw"],
             )
             sciname = node.props["sci_name"]
-            if sciname in treelabels:
+            bl = sciname in treelabels
+            if cfg['label_leaves']:
+                bl = node.is_leaf
+            if bl:
                 ax_tree.text(
                     x_coords[node],
                     y_coords[node],
@@ -65,11 +78,15 @@ def plot_tree_and_heatmap(
                 [x_coords[parent], x_coords[parent]],
                 [y_coords[parent], y_coords[node]],
                 color="black",
+                lw=cfg['tree_lw'],
             )
 
     ax_tree.set_ylim(-0.5, len(leaf_order) - 0.5)
     ax_tree.axis("off")
     ax_tree.invert_yaxis()
+
+    if cfg['max_count'] is not None:
+        reordered_df = reordered_df.clip(upper=cfg['max_count']+1)
 
     mx = np.max(reordered_df.values) + 1
     bounds = np.arange(mx)
@@ -85,19 +102,25 @@ def plot_tree_and_heatmap(
         cmap=custom_cmap,
         norm=custom_norm,
         ax=ax_heatmap,
-        cbar_kws={"ticks": midpoints, "shrink":1.25},
+        cbar_kws={"ticks": midpoints, 
+                  "shrink": cfg['cbar_shrink'],
+                  "aspect": cfg['cbar_aspect'],
+                  "fraction": cfg['cbar_fraction']
+                  },
         xticklabels=reordered_df.columns
     )
     for i in range(reordered_df.shape[1] + 1):
-        ax_heatmap.axvline(i, color="white", lw=cfg['heatmap_whitespace_width'])
+        ax_heatmap.axvline(i, color=colors[0], lw=cfg['heatmap_whitespace_width'])
 
     cbar = ax_heatmap.collections[0].colorbar
     cbar.ax.yaxis.set_major_locator(ticker.FixedLocator(midpoints))
-    cbar.set_ticklabels(bounds[:-1])
+    tlab = [str(l) for l in bounds[:-1]]
+    tlab[-1] = f"≥{tlab[-1]}"
+    cbar.set_ticklabels(tlab)
     cbar.ax.yaxis.set_minor_locator(ticker.NullLocator())
     cbar.ax.tick_params(labelsize=cfg['ft0'])
     cbar.set_label(cfg['cbar_lab'], fontsize=cfg['ft1'])
-    
+
     ax_heatmap.get_yaxis().set_visible(False)
     ax_heatmap.tick_params(axis='both', labelsize=cfg['ft1'])
     for label in ax_heatmap.get_xticklabels():
@@ -106,9 +129,14 @@ def plot_tree_and_heatmap(
         label.set_rotation(45)
 
     plt.tight_layout()
+    dout = output_prefix.parent
+    if not dout.exists():
+        dout.mkdir(parents=True, exist_ok=True)
     for ext in ("png", "pdf"):
         plt.savefig(f"{output_prefix}.{ext}", dpi=dpi, bbox_inches="tight")
     plt.show()
+    plt.close()
+    return
 
 
 def build_tree_layout(t, prefix):
@@ -147,7 +175,7 @@ def build_tree_layout(t, prefix):
 
 def build_presence_df(leaf_order, feature_to_values, prefix):
     data = {}
-    entry_ids = [int(e.lstrip(prefix)) for e in leaf_order]
+    entry_ids = [e.lstrip(prefix) for e in leaf_order]
 
     for feature_name, value_map in feature_to_values.items():
         data[feature_name] = [value_map.get(entry_id, 0) for entry_id in entry_ids]
@@ -158,15 +186,6 @@ def build_presence_df(leaf_order, feature_to_values, prefix):
 #     vals = [dict_entry_ncopies[int(e.lstrip(prefix))] for e in leaf_order]
 #     df = pd.DataFrame({gene: vals}, index=leaf_order)
 #     return df.reindex(leaf_order)
-
-
-def require_file(path, label):
-    path = Path(path)
-    if not path.exists():
-        die(f"{label} not found: {path}")
-    if not path.is_file():
-        die(f"{label} is not a file: {path}")
-    return path
 
 
 def load_cluster_map(cluster_glob):
@@ -265,6 +284,10 @@ def load_config(path):
     if not isinstance(cfg, dict):
         die("config must be a YAML mapping")
 
+    if 'prevalence' not in cfg:
+        die(f"config missing keys: prevalence")
+    cfg = cfg['prevalence']
+
     required = {"dtp", "ttnames", "treelabels"}
     missing = required - set(cfg)
     if missing:
@@ -293,6 +316,7 @@ def load_metadata(path):
     path = require_file(path, "metadata")
     meta1 = pd.read_csv(path)
     validate_metadata(meta1)
+    meta1["entry_id"] = meta1["entry_id"].astype(str)
 
     if meta1.empty:
         die(f"metadata file is empty: {path}")
@@ -323,6 +347,7 @@ def load_entry_id_map(path):
         die(f"entry-id map must have exactly 3 columns, found {df_id.shape[1]} in {path}")
     df_id.columns = ["aa_id", "entry_id", "source_defline"]
     validate_entry_id_map(df_id)
+    df_id["entry_id"] = df_id["entry_id"].astype(str)
     return dict(zip(df_id["aa_id"].values, df_id["entry_id"].values))
 
 
@@ -353,54 +378,89 @@ def main():
     dict_contig_entry = load_entry_id_map(args.entry_id_map)
     meta1, dict_entry_tid, dict_entry_dtp = load_metadata(args.metadata)
 
-    cfg = load_config(args.config)['prevalence']
-
+    cfg = load_config(args.config)
 
     ## Useful dicts
+
+    # map gene to isolate to number of copies
+    feature_to_values = {
+        gene: get_dict_entry_count(
+            contig_name_file, cluster_glob, dict_contig_entry, meta1
+        )
+        for gene, contig_name_file, cluster_glob in zip(
+            args.genes, args.contig_name_files, args.cluster_globs
+        )
+    }
 
     # Major taxonomic groups to plot
     ttnames = cfg["ttnames"]
     ttn_trans = ncbi.get_name_translator(ttnames)
     ttids = [ttn_trans[n][0] for n in ttnames]
-   
+
     # Map different data types to taxids
-    dict_dtp_tids = defaultdict(list)
+    dtp = cfg["dtp"]
+    tids = []
+    entries = []
+    dict_dtp_entries = defaultdict(list)
     for entry, tid in dict_entry_tid.items():
-        lin = ncbi.get_lineage(tid)
-        if any([t in lin for t in ttids]):
-            typ = dict_entry_dtp[entry]
-            dict_dtp_tids[typ].append(tid)
+        typ = dict_entry_dtp[entry]
+        if typ == dtp:
+            gene = cfg['count_min_gene']
+            count = feature_to_values[gene][entry]
+            if count >= cfg['count_min']:
+                lin = ncbi.get_lineage(tid)
+                if any([t in lin for t in ttids]):
+                    entries.append(entry)
+                    tids.append(int(tid))
 
     # map taxid to list of isolates
     dict_tid_entries = defaultdict(list)
-    for _, row in meta1.iterrows():
-        entry = row["entry_id"]
-        dict_tid_entries[row["tax_id"]].append(entry)
+    for entry, tid in zip(entries, tids):
+        dict_tid_entries[tid].append(entry)
 
-    # map gene to isolate to number of copies
-    feature_to_values = {
-        gene: get_dict_entry_count(contig_name_file, cluster_glob, dict_contig_entry, meta1)
-        for gene, contig_name_file, cluster_glob 
-        in zip(args.genes, args.contig_name_files, args.cluster_globs)
-    }
+    # get mapping of changed ids
+    tids_old = meta1["tax_id"].values.astype(int)
+    nms = [ncbi.get_taxid_translator([tid])[tid] for tid in tids_old]
+    dict_nm = ncbi.get_name_translator(nms)
+    tids_new = [dict_nm[nm][0] for nm in nms]
+    dict_tidnew_tidold = dict(zip(tids_new, tids_old))
 
     ## Tree building
-
-    dtp = cfg["dtp"]
+    # def check_count(entry, feature_to_values):
+    #     if cfg['count_min'] > 0:
+    #         gene = cfg['count_min_gene']
+    #         count = feature_to_values[gene][entry]
+    #         if count >= cfg['count_min']:
+    #             return entry
+    #         else:
+    #             return None
+    #     else:
+    #         return entry
     prefix = "marf_"
-    t = ncbi.get_topology(dict_dtp_tids[dtp])
-
+    t = ncbi.get_topology(tids)
     for n in t.traverse():
         tid = n.name
+        # sciname = ncbi.get_taxid_translator([tid])[int(tid)]
+        # tid = ncbi.get_name_translator([sciname])[sciname][0]
+        tidold = dict_tidnew_tidold.get(int(tid))
+        if tidold is not None:
+            tid = tidold
         entries = dict_tid_entries.get(int(tid))
-        if entries is not None:
+        nodes = []
+        if (entries is not None):
+            nodes.append(n)
             n.name = prefix + str(entries[0])
             sciname = n.props["sci_name"]
             if len(entries) > 1:
                 for m in entries[1:]:
                     n_new = n.add_sister(name=prefix + str(m))
                     n_new.add_props(sci_name=sciname)
-
+                    nodes.append(n_new)
+            # if cfg['count_min'] > 0:
+            #     for nsub, entry in zip(nodes, entries):
+            #         entry = check_count(entry, feature_to_values)
+            #         if entry is None:
+            #             nsub.delete()
     ## Plotting
 
     leaf_order, y_coords, x_coords = build_tree_layout(t, prefix)
@@ -422,6 +482,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-

@@ -12,22 +12,28 @@
 
 # Given marferret mmdb hmmsearch hits for fbp1, what is their source entry id?
 FNS_NAMES=(
-    /scratch/bgrodner/fbp1_paper/small_tree/results/hmmsearch/fbp1_hmmsearch_T30.names
-    /scratch/bgrodner/metaT_data/isip_hmmsearch/results/hmmsearch/isip1_hmmsearch_T30.names
-    /scratch/bgrodner/metaT_data/isip_hmmsearch/results/hmmsearch/isip2_hmmsearch_T30.names
-    /scratch/bgrodner/metaT_data/isip_hmmsearch/results/hmmsearch/isip3_hmmsearch_T30.names
+    /Users/benjamingrodner/work/armbrust/data/prevalence/hmmsearch_names/fre_hmmsearch_T30.names
 )
+    # /scratch/bgrodner/fbp1_paper/small_tree/results/hmmsearch/fbp1_hmmsearch_T30.names
+    # /scratch/bgrodner/metaT_data/isip_hmmsearch/results/hmmsearch/isip1_hmmsearch_T30.names
+    # /scratch/bgrodner/metaT_data/isip_hmmsearch/results/hmmsearch/isip2_hmmsearch_T30.names
+    # /scratch/bgrodner/metaT_data/isip_hmmsearch/results/hmmsearch/isip3_hmmsearch_T30.names
 
-FN_MERGE_NAMES='merge_contig_names.txt'
+FN_MERGE_NAMES='merge_contig_names-fre.txt'
+FN_MERGE_NAMES_MFT='merge_contig_names-fre-mft.txt'
 > $FN_MERGE_NAMES
 for f in ${FNS_NAMES[@]}; do
     cat $f >> $FN_MERGE_NAMES
 done
 
-FN_AAINFO=/mnt/nfs/projects/marferret/v1.1.1/data/MarFERReT.v1.1.1.proteins_info.tab.gz
-FN_FBP1INFO=marfmmdb_contig_source.grep.tsv
+# cat /Users/benjamingrodner/work/armbrust/data/prevalence/hmmsearch_names/* > $FN_MERGE_NAMES
+
+grep -e '^mft' $FN_MERGE_NAMES > $FN_MERGE_NAMES_MFT
+
+FN_AAINFO=MarFERReT.v1.1.1.proteins_info.tab.gz
+FN_FBP1INFO=marfmmdb_contig_source-fre.grep.tsv
 zgrep \
-    -f "$FN_MERGE_NAMES" \
+    -f "$FN_MERGE_NAMES_MFT" \
     "$FN_AAINFO" \
     > "$FN_FBP1INFO"
 
