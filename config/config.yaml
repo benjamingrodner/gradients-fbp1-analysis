@@ -3,7 +3,8 @@
 # and Isolate transcriptomes 
 # (isolates sequence files should be the only files in that dir)
 dirs_data: 
-  metatranscriptomes: /scratch/bgrodner/metaT_data/old_pipeline_chris_parquets
+  fmt_metatranscriptome_annotations: /mnt/nfs/projects/armbrust-metat/merged_annotation_parquets/merge_counts_tax_gene/{batch}-merge_counts_tax_gene.parquet
+  fmt_metatranscriptome_seqs: /mnt/nfs/projects/armbrust-metat/merged_annotation_parquets/seqs/{batch}-seqs.parquet
   isolates: data/isolates
   experiments: data/experiments
 
@@ -22,12 +23,14 @@ fn_config: config/config.yaml
 
 # wildcards to run from metat files
 batches:
-  - G1NS
-  - G1PA
-  - G2NS
-  - G2PA
-  - G3NS
-  - G3PA.UW
+  # - g1-st-am-ns
+  - g1-st-am-pa
+  # - g2-st-am-ns
+  - g2-st-am-pa
+  # - g3-uw-am-ns
+  - g3-uw-am-pa
+  - g3-uw-pm-pa
+  - g3-diel-pa
 
 # Experiment info table
 fn_experiment_info: resources/experiments_info.yaml
@@ -52,6 +55,15 @@ dict_gene_hmmprofile:
   psaA: /scratch/bgrodner/Resources/KO_profiles/K19971.hmm
   mtnC: /scratch/bgrodner/Resources/KO_profiles/K11601.hmm
   mtnC2: /scratch/bgrodner/Resources/KO_profiles/K19975.hmm
+  isip1: /scratch/bgrodner/Resources/custom_hmms/ISIP1.trimal025.aln.selex.hmm
+  isip2: /scratch/bgrodner/Resources/custom_hmms/ISIP2.trimal025.aln.selex.hmm
+  isip3: /scratch/bgrodner/Resources/custom_hmms/ISIP3.trimal025.aln.selex.hmm
+
+genes_custom: 
+  - fbp1 
+  - isip1
+  - isip2
+  - isip3
 
 # Target taxnames to group things by
 ttaxnames:
@@ -65,6 +77,10 @@ outgroup_genes: [
   btuF, desE, hmuT, fecB, btuF2, mtsA, yclQ, fhuD, fhuD2, htsA, znuA, 
   znuA2, psaA, mtnC, mtnC2
 ]
+
+annotate_custom_genes:
+  join_key: target_id
+  col_6tr: target_id_6tr_kofam
 
 fn_manual_subset_clusters:   # Text file with list of cluster names to keep blank or null if you don't want to subset
 
@@ -129,7 +145,7 @@ get_fasta_from_parquet:
 
 hmmsearch:
   thresh_score: 30  # Only keep hits with score greater than or equal to
-  threads: 8
+  threads: 4
   mem_mb: 10000
   runtime: 60
 

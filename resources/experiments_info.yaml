@@ -9,10 +9,12 @@ amphora-graff_van_creveld_et_al_2023:
     adapter_file: resources/adapters/TruSeq3-PE-2.fa
     regex_condition: '(?<=1\:\s)(?P<condition>.+)(?=\sN\d$)'
     deseq_ctrl_tests:
-        'Ac Control': ['Ac Hydrogren peroxide','Ac Iron limitation',]
+        'Ac Control': ['Ac Iron limitation',]
+        # 'Ac Control': ['Ac Hydrogren peroxide','Ac Iron limitation',]
     plot_deseq: 
-        figsize: [1,0.45]
+        figsize: [3,0.4]
         stacked_cmap: 'winter'
+        xlims: [0, 0.35]
 chaetoceros-graff_van_creveld_et_al_2023:
     prefix: chasp_gvc
     taxname: "Chaetoceros sp. CCMP199"
@@ -52,10 +54,12 @@ t_oceanica-graff_van_creveld_et_al_2023:
     adapter_file: resources/adapters/TruSeq3-PE-2.fa
     regex_condition: '(?<=1\:\s)(?P<condition>.+)(?=\sN\d$)'
     deseq_ctrl_tests:
-        'To Control': ['To Hydrogren peroxide','To Iron limitation',]
+        'To Control': ['To Iron limitation',]
+        # 'To Control': ['To Hydrogren peroxide','To Iron limitation',]
     plot_deseq: 
-        figsize: [3,0.45]
+        figsize: [0.588,0.4]
         stacked_cmap: 'autumn'
+        xlims: [0, 0.055]
 t_pseudonana-graff_van_creveld_et_al_2023:
     prefix: thapse_gvc
     taxname: "Thalassiosira pseudonana CCMP1335"
@@ -116,8 +120,9 @@ p_antarctica-rizkallah_et_al_2020:
     deseq_ctrl_tests:
         0h: ['14h','24h','72h']
     plot_deseq: 
-        figsize: [3,0.6]
+        figsize: [2.591,0.7]
         stacked_cmap: 'summer'
+        xlims: [0,0.3]
 
 c_closterium_uga4-quirk_sunda_cohen_2025:
     prefix: cylclo4_qui
@@ -213,8 +218,9 @@ g_oceanica_uga13-quirk_sunda_cohen_2025:
         high_Fe: ['low_Fe']
         add_back: ['low_Fe']
     plot_deseq: 
-        figsize: [1,0.3]
+        figsize: [0.956,0.4]
         stacked_cmap: 'cool'
+        xlims: [0,0.1]
 phatr_starvation-villar_et_al_2025:
     prefix: phatri_vil
     taxname: "Phaeodactylum tricornutum"
@@ -235,8 +241,9 @@ phatr_starvation-villar_et_al_2025:
         FeHA1: ['3D-HA1','7D-HA1','2W-HA1']
         FeHA2: ['3D-HA2','7D-HA2','2W-HA2']
     plot_deseq: 
-        figsize: [1,0.6]
+        figsize: [0.588,0.7]
         stacked_cmap: 'spring'
+        xlims: [0,0.055]
 micromonas-meyer_et_al_2025:
     prefix: mic_mey
     taxname: "uncultured Bathycoccus"
@@ -256,8 +263,9 @@ micromonas-meyer_et_al_2025:
     deseq_ctrl_tests:
         'replete': ['deplete']
     plot_deseq: 
-        figsize: [1,0.3]
+        figsize: [0.546,0.4]
         stacked_cmap: 'Wistia'
+        xlims: [0,0.05]
 # p_granii-cohen_et_al_2018:
 #     prefix: psegra_coh
 #     taxname: "Pseudo-nitzschia granii"

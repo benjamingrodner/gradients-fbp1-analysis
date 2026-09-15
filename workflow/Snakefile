@@ -4,8 +4,10 @@ min_version("9.1.0")
 
 
 include: "rules/common.smk"
-include: "rules/hmmsearch.smk"
+include: "rules/hmmsearch_env.smk"
+include: "rules/hmmsearch_db.smk"
 include: "rules/hmmsearch_experiment.smk"
+include: "rules/annotate_custom_genes.smk"
 include: "rules/cluster_db.smk"
 include: "rules/alignment.smk"
 include: "rules/build_tree.smk"
@@ -22,6 +24,7 @@ include: "rules/deseq.smk"
 
 rule all:
     input:
+        # fn_custom_ann_tables_done,
         # fn_full_tree_done,
         # fn_extra_ml_and_bootstraps_done,
         # fn_read_and_count_downloads_done,
