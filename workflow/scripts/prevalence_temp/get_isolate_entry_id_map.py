@@ -30,7 +30,7 @@ for fn in fns:
 df = pd.DataFrame(zip(aa_ids, entry_ids), columns=['aa_ids','entry_ids'])
 df['source_defline'] = ''
 
-fn_out = "/Users/benjamingrodner/work/armbrust/data/prevalence/isolates/entry_id_map_shiri.csv"
+fn_out = "/Users/benjamingrodner/work/armbrust/data/prevalence/isolates/entry_id_map_shiri.tsv"
 df.to_csv(fn_out, header=False, index=False, sep='\t')
 
 
