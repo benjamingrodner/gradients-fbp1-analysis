@@ -266,25 +266,32 @@ micromonas-meyer_et_al_2025:
         figsize: [0.546,0.4]
         stacked_cmap: 'Wistia'
         xlims: [0,0.05]
-# p_granii-cohen_et_al_2018:
-#     prefix: psegra_coh
-#     taxname: "Pseudo-nitzschia granii"
-#     method_assembly: download
-#     link_assembly: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/Trinity.fasta"
-#     method_counts: download
-#     link_counts: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/query_KO_bowtiecounts.tab"
-#     colname_contigs: query
-#     colnames_metadata: ['condition']
-#     sample_metadata:
-#         L1: low_Fe
-#         L2: low_Fe
-#         H1: high_Fe
-#         H2: high_Fe
-#         H3: high_Fe
-#     deseq_ctrl_tests:
-#         'high_Fe': ['low_Fe']
-#     plot_deseq: 
-#         figsize: [1.5,6]
+p_granii-cohen_et_al_2018:
+    prefix: psegra_coh
+    taxname: "Pseudo-nitzschia granii"
+    method_assembly: download
+    link_assembly: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/Trinity.fasta"
+    # method_counts: download
+    # link_counts: "ftp://marchanon:anon@rc-ns-ftp.its.unc.edu/Pgranii/query_KO_bowtiecounts.tab"
+    # colname_contigs: query
+    # colnames_metadata: ['condition']
+    # sample_metadata:
+    #     L1: low_Fe
+    #     L2: low_Fe
+    #     H1: high_Fe
+    #     H2: high_Fe
+    #     H3: high_Fe
+    method_counts: salmon-bioproject
+    biosamples: 'PRJNA310815'
+    trimmomatic_opts: "ILLUMINACLIP:resources/adapters/TruSeq3-PE-2.fa:2:30:10:1:true MAXINFO:135:0.5 LEADING:3 TRAILING:3 MINLEN:50 AVGQUAL:20"
+    adapter_file: resources/adapters/TruSeq3-PE-2.fa
+    regex_condition: '(?<=$.+\()(?P<condition>.+)(?=/)$)'
+    deseq_ctrl_tests:
+        '+Fe': ['-Fe']
+    plot_deseq: 
+        figsize: [0.588,0.4]
+        stacked_cmap: 'viridis'
+        xlims: [0, 0.055]
 # chlorella-mansfeldt_et_al_2016:
 #     prefix: chl_man
 #     taxname: "Chlorella sp. SAG 211-18"

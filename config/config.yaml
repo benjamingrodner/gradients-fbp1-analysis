@@ -8,6 +8,8 @@ dirs_data:
   isolates: data/isolates
   experiments: data/experiments
 
+metadata_metat: /mnt/nfs/projects/armbrust-metat/merged_annotation_parquets/all-metadata.csv
+
 # Path for marferret-marmicrodb database download
 path_database: /mnt/nfs/projects/marferret/marmicrodb/MMDB_2024_04_14/MarFERReT.v1.1.1.MARMICRODB.2024_04_14.combined.faa.gz
 fn_db_tax: /mnt/nfs/projects/marferret/marmicrodb/MMDB_2024_04_14/MarFERReT.v1.1.1.MARMICRODB.2024_04_14.combined.uid2tax.tab.gz
@@ -23,11 +25,11 @@ fn_config: config/config.yaml
 
 # wildcards to run from metat files
 batches:
-  # - g1-st-am-ns
+  - g1-st-am-ns
   - g1-st-am-pa
   # - g2-st-am-ns
   - g2-st-am-pa
-  # - g3-uw-am-ns
+  - g3-uw-am-ns
   - g3-uw-am-pa
   - g3-uw-pm-pa
   - g3-diel-pa
