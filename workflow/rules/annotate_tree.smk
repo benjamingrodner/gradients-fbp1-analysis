@@ -20,7 +20,7 @@ rule get_annotation_table_env:
 
 rule get_annotation_table_db:
     input:
-        hmm_table = fn_hmms_best_hit,
+        hmm_table = fn_hmms_db_best_hit,
         seqs_rep = fn_db_rep_seqs_sub,
         seqs_out = fn_outgroup_db_seqs_sub,
     output:

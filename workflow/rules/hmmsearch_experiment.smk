@@ -128,7 +128,7 @@ rule hmmsearch_exp:
 
 rule merge_hmmsearch_hitnames_exp:
     input:
-        [fmt_hmm_hitnames_exp.format(exp='{exp}', gene=gene) for gene in GENES]
+        [fmt_hmm_hitnames_exp.format(exp='{exp}', gene=gene) for gene in GENES_TREE]
     output:
         fn_hmm_hitnames_exp_all
     shell:
@@ -137,7 +137,7 @@ rule merge_hmmsearch_hitnames_exp:
 
 rule get_hmms_best_hit_exp:
     input:
-        [fmt_table_hmm_exp.format(exp='{exp}', gene=gene) for gene in GENES]
+        [fmt_table_hmm_exp.format(exp='{exp}', gene=gene) for gene in GENES_TREE]
     output:
         fmt_hmms_best_hit_exp,
     log:

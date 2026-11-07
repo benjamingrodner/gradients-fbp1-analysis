@@ -282,6 +282,11 @@ def get_regex_seqname(exp):
         r = ['^','']
     return r
 
+def get_db_fns_seqs_to_search(wildcards):
+    fns = glob.glob(config['dirs_data']['isolates'] + '/*')
+    fns.append(config['path_database'])
+    return fns
+
 def get_fns_seqs_to_search(wildcards):
     fns = [fmt_seqs_fasta.format(batch=b) for b in config['batches']]
     fns += glob.glob(config['dirs_data']['isolates'] + '/*')
@@ -345,7 +350,8 @@ def get_fns_hmm_hitnames_nontarget(wildcards):
 def get_fns_hmm_hitnames_target(wildcards):
     fns = []
     for gene in TGENES:
-        fns.append(fmt_hmm_hitnames.format(gene=gene))
+        for batch in BATCHES:
+            fns.append(fmt_hmm_hitnames.format(gene=gene, batch=batch))
     return fns
 
 # Global 
@@ -355,6 +361,7 @@ TGENES = list(set(
     + config['target_genes_for_env_placement']
 ))
 OGENES = config['outgroup_genes']
+GENES_TREE = TGENES + OGENES
 BATCHES = list(config['batches'])
 with open(config['fn_experiment_info'], 'r') as f:
     DICT_EXP = yaml.safe_load(f)
@@ -362,16 +369,18 @@ with open(config['fn_experiment_info'], 'r') as f:
 READS=['1','2']
 # Data format
 fmt_seqs_parquet = (
-    config['dirs_data']['metatranscriptomes'] 
-    + "/seqs-{batch}.parquet"
+    config['dirs_data']['fmt_metatranscriptome_seqs'] 
 )
-# Hmmsearch
-dir_hmmsearch = config['dir_out'] + "/hmmsearch"
+fmt_bigtable = (
+    config['dirs_data']['fmt_metatranscriptome_annotations'] 
+)
+# Hmmsearch env
+dir_hmmsearch = config['dir_out'] + "/hmmsearch/env"
 fmt_seqs_fasta = dir_hmmsearch + "/fastas_to_search/{batch}.fasta"
 fn_seqs_to_search = dir_hmmsearch + "/fastas_to_search/to_search.fasta"
 bn_hmmsearch = (
     dir_hmmsearch 
-    + "/{gene}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
+    + "/{gene}/{batch}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
 )
 fmt_table_hmm = bn_hmmsearch + ".tbl"
 fmt_table_hmm_domain = bn_hmmsearch + ".domain"
@@ -392,7 +401,7 @@ for gene in OGENES:
     bn_hmm_outgroup += f'{gene}_'
 bn_hmm_outgroup = bn_hmm_outgroup.rstrip('_')
 
-fn_hmm_hitnames_all = (
+fn_hmm_env_hitnames_all = (
     dir_hmmsearch + f"/{bn_hmm_genes}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
     + '_all.names'
 )
@@ -414,6 +423,19 @@ fn_outgroup_db_seqs_sub = (
     + f"_db_subn{config['subset_db_outgroups']['number']}.faa"
 )
 
+# Annotate custom genes
+fmt_custom_ann = config['dir_out'] + "/custom_annotation_tables/{batch}-custom_hmms.parquet"
+fn_custom_ann_tables_done = config['dir_out'] + "/custom_annotation_tables/done.txt"
+
+# Hmmsearch db
+dir_hmmsearch_db = config['dir_out'] + "/hmmsearch/db"
+fn_db_seqs_to_search = dir_hmmsearch + "/fastas_to_search/db_seqs_to_search.fasta"
+fn_hmm_db_hitnames_all = (
+    dir_hmmsearch + f"/{bn_hmm_genes}_hmmsearch_T" + str(config['hmmsearch']['thresh_score'])
+    + '_all.names'
+)
+fn_hmms_db_best_hit = dir_hmmsearch + f'/{bn_hmm_genes}_hmms_best_hit.tsv'
+
 # Cluster db
 dir_clust_db = config['dir_out'] + '/cluster/db'
 fn_db_seqs_to_cluster = f'{dir_clust_db}/{bn_hmm_target}_hmmhitseqs.fasta'
@@ -430,10 +452,6 @@ bn_clust_sub = f'{bn_clust}_sub{sub}pct'
 
 # Cluster env
 dir_env_clust = config['dir_out'] + '/cluster/env'
-fmt_bigtable = (
-    config['dirs_data']['metatranscriptomes'] 
-    + "/merge_counts_tax_gene-{batch}.parquet"
-)
 tg_prefix = 'taxgene_'
 ext_env_hitnames = '.txt'
 fmt_env_hitnames_dir_tmp = dir_env_clust + '/{batch}/hitnames_tmp'

@@ -17,12 +17,13 @@ conda activate snakemake_host
 snakemake \
     --snakefile workflow/Snakefile \
     --configfile config/config.yaml \
-    --jobs 16 \
+    --jobs 8 \
     --use-conda \
     --printshellcmds \
     --rerun-incomplete \
     --rerun-triggers mtime \
-    -n \
+    -R plot_exp_foldchange \
+    -p \
     --
 
     # -R merge_counts_fromauthor_and_downloaded merge_salmon_counts rename_exp_assemblies \

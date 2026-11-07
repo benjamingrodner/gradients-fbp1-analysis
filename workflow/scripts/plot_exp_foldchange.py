@@ -40,7 +40,7 @@ from collections import defaultdict
 def save_fig(fig, bn, exts=['png','pdf'], dpi=500):
     fns_out = [f'{bn}.{ext}' for ext in exts]
     for fn_out in fns_out:
-        fig.savefig(fn_out, dpi=dpi, bbox_inches='tight')
+        fig.savefig(fn_out, dpi=dpi)
 
 
 @click.command()
@@ -199,9 +199,9 @@ def main(counts_path, colname_contigs, clusters_format, metadata_path, stats_dir
                 ntests = len(tests)
                 
                 # Percent of transcripts plot
-                fig, ax = plt.subplots(figsize=plot_e['figsize'])
+                fig, ax = plt.subplots(figsize=plot_e['figsize'], layout='constrained')
                 # Log fold change plot
-                fig1, ax1 = plt.subplots(figsize=plot_e['figsize'])
+                fig1, ax1 = plt.subplots(figsize=plot_e['figsize'], layout='constrained')
                 
 
                 # Get the ctrl columns
@@ -476,7 +476,7 @@ def main(counts_path, colname_contigs, clusters_format, metadata_path, stats_dir
                 pval = ds.results_df['pvalue'].get(gene_clust_name,1)
                 dict_xb_pval[x_] = pval
 
-            fig2, ax2 = plt.subplots(figsize=plot_e['figsize'])
+            fig2, ax2 = plt.subplots(figsize=plot_e['figsize'], layout='constrained')
             
             # Bar
             df_stack = df_pct.T.groupby(dict_coln_xb).mean()
@@ -484,7 +484,7 @@ def main(counts_path, colname_contigs, clusters_format, metadata_path, stats_dir
             cmap = cmap if cmap is not None else 'tab20'
             tmp = df_stack.plot(ax=ax2, kind='barh', 
                                 stacked=True, cmap=cmap,
-                                legend=True
+                                legend=False
                                 )
             
             # scatter
@@ -492,39 +492,43 @@ def main(counts_path, colname_contigs, clusters_format, metadata_path, stats_dir
             ax2.scatter(xsc2, ysc2, color='k', s=plotg['dotsize'])
             
             fig_, ax_ = fig2, ax2
-            # Plot pvals
-            xlims = ax_.get_xlim()
-            xticks = ax_.get_xticks()
-            xtickrange = xticks[1] - xticks[0]
-            for y_, pval in dict_xb_pval.items():
-                if (pval is not None) and (pval < 0.05):
-                    pv = round(pval,4)
-                    pv = f'={pv}' if pv > 0 else f'<0.00005'
-                    txt = f'p{pv}'
-                    # txt = f'p{pv}' if ax_ == ax1 else '*'
-                    ax_.text(
-                        xlims[1] + xtickrange*plotg['pval_adj'], y_, txt,
-                        fontsize=plotg['ft0'] - 1,
-                        va='center',
-                        ha='right'
-                    )
+            # # Plot pvals
+            # xlims = ax_.get_xlim()
+            # xticks = ax_.get_xticks()
+            # xtickrange = xticks[1] - xticks[0]
+            # for y_, pval in dict_xb_pval.items():
+            #     if (pval is not None) and (pval < 0.05):
+            #         pv = round(pval,4)
+            #         pv = f'={pv}' if pv > 0 else f'<0.00005'
+            #         txt = f'p{pv}'
+            #         # txt = f'p{pv}' if ax_ == ax1 else '*'
+            #         ax_.text(
+            #             xlims[1] + xtickrange*plotg['pval_adj'], y_, txt,
+            #             fontsize=plotg['ft0'] - 1,
+            #             va='center',
+            #             ha='right'
+            #         )
 
-            # Print nds to the figure
-            if dict_xb_nd:
-                for y_, nd in dict_xb_nd.items():
-                    ax_.text(
-                        xlims[0] + xtickrange*plotg['nd_shift'],  y_, f'n.d.({nd})',
-                        fontsize=plotg['ft0'] - 1,
-                        va='center',
-                        ha='left'
-                    )
+            # # Print nds to the figure
+            # if dict_xb_nd:
+            #     for y_, nd in dict_xb_nd.items():
+            #         ax_.text(
+            #             xlims[0] + xtickrange*plotg['nd_shift'],  y_, f'n.d.({nd})',
+            #             fontsize=plotg['ft0'] - 1,
+            #             va='center',
+            #             ha='left'
+            #         )
 
             # adjust the plots
-            ax_.set_yticks(yticks, labels=yticklabels)
+            # ax_.set_yticks(yticks, labels=yticklabels)
+            ax_.set_yticks([])
             ax_.tick_params(axis='y', labelsize=plotg['ft1']) 
             ax_.tick_params(axis='x', labelsize=plotg['ft0'], direction='in') 
             ax_.tick_params(axis='y', length=0, width=0, which='both')
             ax_.tick_params(axis='y', pad=plotg['ft1']*1.5)
+            xlims = plot_e.get('xlims')
+            if xlims is not None:
+                ax_.set_xlim(xlims[0],xlims[1])
             # Flip around
             ax_.invert_yaxis()
 
